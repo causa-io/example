@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# A shared error DTO referenced by every API spec's `404` response.
+# The `@causa/runtime` package ships a matching `NotFoundErrorDto` class and a
+# `toDtoType(SomeError, ...)` helper that controllers use to translate a thrown
+# domain error into this HTTP body.
+# This schema file exists so the OpenAPI documents can `$ref` a consistent
+# shape.
+
+title: NotFoundErrorDto
+type: object
+description: Returned when the requested resource does not exist.
+additionalProperties: false
+properties:
+  statusCode:
+    type: integer
+    const: 404
+    description: The HTTP status code of the error.
+  errorCode:
+    type: string
+    const: notFound
+    description: An error identifier, as a string.
+  message:
+    type: string
+    description: A human-readable description of the error.
+required:
+  - statusCode
+  - errorCode
+  - message

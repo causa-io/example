@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# Shared error DTO for `409` responses returned by optimistic-concurrency
+# checks.
+# When a client passes the `updatedAt` it last saw and the entity has since
+# changed, the mutation is rejected with this body.
+# Matches `IncorrectVersionErrorDto` from `@causa/runtime`.
+
+title: IncorrectVersionErrorDto
+type: object
+description: >-
+  Returned when the `updatedAt` provided by the client does not match the
+  current version of the entity, indicating it was modified concurrently.
+additionalProperties: false
+properties:
+  statusCode:
+    type: integer
+    const: 409
+    description: The HTTP status code of the error.
+  errorCode:
+    type: string
+    const: incorrectVersion
+    description: An error identifier, as a string.
+  message:
+    type: string
+    description: A human-readable description of the error.
+required:
+  - statusCode
+  - errorCode
+  - message
