@@ -1,0 +1,138 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# The topic id `catalog.book.v1` is derived from this file's PATH (see the
+# `events.topics` rule in the root causa.yaml):
+# domain=catalog, topic=book, version=v1.
+#
+# A breaking change to this contract would mean adding a `v2.yaml` (new topic).
+
+title: BookEvent
+type: object
+description: An event describing a change to a book in the catalogue.
+additionalProperties: false
+# Marks this schema as an "entity event": a wrapper carrying an entity payload
+# plus the standard envelope (id, producedAt, name).
+# Enables the versioned event processor and entity manager machinery in the
+# runtime, as well as mutation test helpers.
+causa:
+  entityEvent: true
+properties:
+  # The unique ID of this event (not the book). Used for de-duplication.
+  id:
+    type: string
+    format: uuid
+    description: The UUID of the event.
+  producedAt:
+    type: string
+    format: date-time
+    description: The business date at which the event was produced.
+  name:
+    type: string
+    # Using an `enumHint` here leaves the possibility to add new event names in
+    # the future while making clear to consumers that it won't be considered a
+    # breaking change.
+    # Consumers usually either:
+    # - Consume all events, regardless of name (e.g. to build a projection).
+    # - Consume specific events as trigger for some action.
+    causa:
+      enumHint: "#/$defs/BookEventName"
+    description: The name of the event.
+  data:
+    # The payload is always a full Book in its post-change state.
+    oneOf:
+      - $ref: ../../entities/book.yaml
+    description: The book.
+required:
+  - id
+  - producedAt
+  - name
+  - data
+
+$defs:
+  BookEventName:
+    title: BookEventName
+    type: string
+    enum:
+      - bookCreated
+      - bookUpdated
+      - bookDeleted
+    description: The name of a book event.
+
+  # Each constraint ties an event `name` to the state its payload must be in
+  # prior to the event. It also encodes which properties of the payload are
+  # allowed to change in this event.
+  #
+  # The two `causa` keys encode a state machine:
+  #   - `entityMutationFrom`: the prior state(s) this transition is allowed
+  #     from. `[null]` means "from nothing" (a creation). A list of constraint
+  #     `$ref`s means "from one of these states".
+  #   - `entityPropertyChanges`: which properties may change in this transition.
+  #     `"*"` means "any" (used for creation).
+  #
+  # This is used by code generation for entity mutation expectation helpers.
+  BookCreatedEventConstraint:
+    title: BookCreatedEventConstraint
+    type: object
+    description: An event indicating that a book was created.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+      entityMutationFrom: [null]
+      entityPropertyChanges: "*"
+    properties:
+      name:
+        const: bookCreated
+      data:
+        oneOf:
+          - $ref: ../../entities/book.yaml#/$defs/BookNotDeletedConstraint
+    required:
+      - name
+      - data
+
+  BookUpdatedEventConstraint:
+    title: BookUpdatedEventConstraint
+    type: object
+    description: An event indicating that a book's details were updated.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+      entityMutationFrom:
+        - ../../entities/book.yaml#/$defs/BookNotDeletedConstraint
+      entityPropertyChanges:
+        - updatedAt
+        - title
+        - authorName
+        - isbn
+        - price
+        - availability
+    properties:
+      name:
+        const: bookUpdated
+      data:
+        oneOf:
+          - $ref: ../../entities/book.yaml#/$defs/BookNotDeletedConstraint
+    required:
+      - name
+      - data
+
+  BookDeletedEventConstraint:
+    title: BookDeletedEventConstraint
+    type: object
+    description: An event indicating that a book was deleted.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+      entityMutationFrom:
+        - ../../entities/book.yaml#/$defs/BookNotDeletedConstraint
+      entityPropertyChanges:
+        - updatedAt
+        - deletedAt
+    properties:
+      name:
+        const: bookDeleted
+      data:
+        oneOf:
+          - $ref: ../../entities/book.yaml#/$defs/BookDeletedConstraint
+    required:
+      - name
+      - data

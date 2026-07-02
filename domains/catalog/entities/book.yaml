@@ -1,0 +1,131 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# This JSON Schema is the single source of truth for a Book.
+#
+# From it, Causa generates:
+# - a TypeScript `Book` class with Spanner + validation decorators
+#   (model/generated.ts),
+# - test factories and assertion helpers,
+#
+# It is also used as the payload of the `catalog.book.v1` event.
+# The Spanner table (../spanner/0002-create-book-table.sql) must match this
+# schema.
+
+title: Book
+type: object
+description: A book sold by the shop.
+additionalProperties: false
+# The `causa.googleSpannerTable` extension marks this object as a Spanner table
+# and declares its primary key.
+# The code generator emits `@SpannerTable({ primaryKey: ['id'] })` on the
+# generated class, and `@SpannerColumn` on each property.
+causa:
+  googleSpannerTable:
+    primaryKey: [id]
+properties:
+  id:
+    type: string
+    format: uuid
+    description: The unique ID of the book.
+  createdAt:
+    type: string
+    format: date-time
+    description: The date at which the book was added to the catalogue.
+  # Doubles as the optimistic-concurrency token: mutations pass it as the
+  # `updatedAt` query parameter and are rejected if it no longer matches.
+  updatedAt:
+    type: string
+    format: date-time
+    description: The date at which the book was last updated.
+  deletedAt:
+    # A nullable value is expressed as a `oneOf` of a type and `"null"`.
+    # A non-null value means the row is soft-deleted.
+    # See the row deletion policy in the Spanner DDL.
+    oneOf:
+      - type: string
+        format: date-time
+      - type: "null"
+    description: The date at which the book was removed from the catalogue.
+  title:
+    type: string
+    description: The title of the book.
+  authorName:
+    type: string
+    description: The name of the book's author.
+  isbn:
+    type: string
+    description: The 13-digit ISBN-13 of the book.
+  price:
+    # Reuse the shared Money value object.
+    # Objects are stored as a JSON column in Spanner.
+    oneOf:
+      - $ref: ../../common/entities/money.yaml
+    description: The retail price of the book.
+  cost:
+    oneOf:
+      - $ref: ../../common/entities/money.yaml
+    description: |-
+      The shop's acquisition cost for the book.
+      Visible to staff only.
+  availability:
+    # A closed enum is used here instead of a string with `enumHint` because the
+    # enum is not expected to change, and adding a new case would likely break
+    # existing logic.
+    oneOf:
+      - $ref: "#/$defs/BookAvailability"
+    description: Whether the book can currently be ordered.
+required:
+  - id
+  - createdAt
+  - updatedAt
+  - deletedAt
+  - title
+  - authorName
+  - isbn
+  - price
+  - cost
+  - availability
+
+$defs:
+  BookAvailability:
+    title: BookAvailability
+    type: string
+    enum:
+      - available
+      - outOfStock
+      - discontinued
+    description: Whether a book can currently be ordered.
+
+  # A "constraint" is a sub-schema that describes a specific state of the
+  # entity. The `causa.constraintFor: "#"` extension links it to the root
+  # entity. The code generator produces a narrowed TypeScript type (e.g.
+  # `BookNotDeleted`) for each constraint, letting services express "a book that
+  # is known not to be deleted" in the type system. They are also referenced by
+  # the event schema to say which state an event's payload is in, which in turn
+  # produces expectation test helpers for entity mutations and their events.
+  BookNotDeletedConstraint:
+    title: BookNotDeletedConstraint
+    type: object
+    description: A book that has not been deleted.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+    properties:
+      deletedAt:
+        type: "null"
+    required:
+      - deletedAt
+
+  BookDeletedConstraint:
+    title: BookDeletedConstraint
+    type: object
+    description: A book that has been deleted.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+    properties:
+      deletedAt:
+        type: string
+        format: date-time
+    required:
+      - deletedAt
