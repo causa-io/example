@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=.causa/configuration-schema.yaml
+
+openApi:
+  # Build the OpenAPI `servers` list from the environment configuration: each
+  # environment's `dns.api` becomes a server URL.
+  serversFromEnvironmentConfiguration: dns.api
+
+  # Global OpenAPI information merged into the generated document for the entire
+  # workspace (merging all per-domain OpenAPI specifications).
+  global:
+    info:
+      title: Bookshop API
+      description: The API for the Bookshop example backend.
+
+    components:
+      securitySchemes:
+        # All endpoints authenticate with a bearer JWT.
+        bearer:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+
+    # Apply the bearer scheme to every operation by default.
+    security:
+      - bearer: []

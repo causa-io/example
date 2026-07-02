@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# Shared error DTO for `400` responses caused by invalid input.
+# Matches `ValidationErrorDto` from `@causa/runtime`.
+# `fields` lists the offending property paths so a client can mark the right
+# form inputs.
+
+title: ValidationErrorDto
+type: object
+description: Returned when the request body or parameters failed validation.
+additionalProperties: false
+properties:
+  statusCode:
+    type: integer
+    const: 400
+    description: The HTTP status code of the error.
+  errorCode:
+    type: string
+    const: invalidInput
+    description: An error identifier, as a string.
+  message:
+    type: string
+    description: A human-readable description of the error.
+  fields:
+    type: array
+    items:
+      type: string
+    description: The names/paths of the fields that failed validation.
+required:
+  - statusCode
+  - errorCode
+  - message
+  - fields

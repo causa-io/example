@@ -1,0 +1,9 @@
+match /orders/{orderId} {
+  allow read: if
+    isStaff() ||
+    isAuthenticatedAs(resource.data.customer);
+
+  // All writes go through the backend (Admin SDK).
+  // Clients are never allowed to write.
+  allow write: if false;
+}

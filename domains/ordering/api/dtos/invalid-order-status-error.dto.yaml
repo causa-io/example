@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# A domain-specific error DTO for a state-machine conflict.
+# Returned as `400`. A `409` means only an optimistic-concurrency mismatch (a
+# stale `updatedAt`), never a business-state conflict.
+
+title: InvalidOrderStatusErrorDto
+type: object
+description: >-
+  Returned when the operation is not allowed for the order's current status.
+additionalProperties: false
+properties:
+  statusCode:
+    type: integer
+    const: 400
+    description: The HTTP status code of the error.
+  errorCode:
+    type: string
+    const: ordering.invalidOrderStatus
+    description: An error identifier, as a string.
+  message:
+    type: string
+    description: A human-readable description of the error.
+required:
+  - statusCode
+  - errorCode
+  - message

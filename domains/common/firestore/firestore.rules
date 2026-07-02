@@ -1,0 +1,31 @@
+// Shared Firestore security-rule helpers
+//
+// Each domain contributes a `firestore.rules` fragment.
+//  The `GoogleFirestoreMergeRules` infrastructure processor concatenates every
+// fragment and wraps them in the outer
+// `service cloud.firestore { match /databases/{db}/documents { ... } }`
+// boilerplate, producing the single ruleset that is deployed.
+//
+// This `common` fragment holds only reusable helper functions.
+// The domain fragments hold the `match` blocks that use them.
+
+// Whether the caller is authenticated at all.
+function isAuthenticated() {
+  return request.auth != null;
+}
+
+// Whether the caller is authenticated as the user with the given id.
+function isAuthenticatedAs(id) {
+  return isAuthenticated() &&
+    id != null &&
+    id is string &&
+    request.auth.uid == id;
+}
+
+// Whether the caller is a member of bookshop staff.
+function isStaff() {
+  return isAuthenticated() &&
+    request.auth.token.roles != null &&
+    request.auth.token.roles is list &&
+    'staff' in request.auth.token.roles;
+}

@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=../.causa/configuration-schema.yaml
+
+# Setting this under `domains/` makes it apply to all service projects, but not
+# infrastructure projects.
+openApi:
+  specifications: [../api/*.api.yaml]

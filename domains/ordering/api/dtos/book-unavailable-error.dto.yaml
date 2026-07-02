@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+
+title: BookUnavailableErrorDto
+type: object
+description: >-
+  Returned when an order references books that cannot currently be ordered.
+additionalProperties: false
+properties:
+  statusCode:
+    type: integer
+    const: 400
+    description: The HTTP status code of the error.
+  errorCode:
+    type: string
+    const: ordering.bookUnavailable
+    description: An error identifier, as a string.
+  message:
+    type: string
+    description: A human-readable description of the error.
+  books:
+    type: array
+    items:
+      type: string
+      format: uuid
+    description: The IDs of the books that cannot currently be ordered.
+required:
+  - statusCode
+  - errorCode
+  - message
+  - books

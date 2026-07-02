@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=.causa/configuration-schema.yaml
+#
+# Each environment supplies a `configuration` block that is merged on top of the
+# workspace (and project) configuration when that environment is selected on the
+# command line (`cs ... -e dev`).
+# This is where everything that differs between dev and prod lives: GCP project
+# ids, DNS names, resource sizing...
+#
+# Environments map one-to-one to Terraform workspaces, so each environment's
+# state is isolated.
+
+environments:
+  dev:
+    name: Development
+    configuration:
+      terraform:
+        workspace: dev
+
+      dns:
+        api: api.dev.bookshop.example
+        base: dev.bookshop.example
+
+      google:
+        # The dedicated GCP project for the dev environment.
+        project: bookshop-example-dev
+
+  prod:
+    name: Production
+    configuration:
+      terraform:
+        workspace: prod
+
+      dns:
+        api: api.bookshop.example
+        base: bookshop.example
+
+      google:
+        project: bookshop-example-prod
+
+        spanner:
+          instance:
+            # Production autoscales the Spanner instance instead of using a
+            # fixed size.
+            autoscaling:
+              minProcessingUnits: 1000
+              maxProcessingUnits: 3000
+              highPriorityCpuUtilizationTarget: 65
+              storageUtilizationTarget: 95

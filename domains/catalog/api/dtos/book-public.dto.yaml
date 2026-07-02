@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# The DTO representation of a Book returned by the catalogue API.
+# It mirrors the entity but is a separate type on purpose: the API contract
+# (what clients see) is decoupled from the persistence model (what is stored):
+# - Internal fields are not leaked to clients.
+# - Returned fields can vary based on authorization logic.
+
+title: BookPublicDto
+type: object
+description: A book as returned by the catalogue API.
+additionalProperties: false
+properties:
+  id:
+    type: string
+    format: uuid
+    description: The unique ID of the book.
+  createdAt:
+    type: string
+    format: date-time
+    description: The date at which the book was added to the catalogue.
+  updatedAt:
+    type: string
+    format: date-time
+    description: The date at which the book was last updated.
+  title:
+    type: string
+    description: The title of the book.
+  authorName:
+    type: string
+    description: The name of the book's author.
+  isbn:
+    type: string
+    description: The 13-digit ISBN-13 of the book.
+  price:
+    oneOf:
+      - $ref: ../../../common/entities/money.yaml
+    description: The retail price of the book.
+  # `cost` is deliberately NOT in `required`: it is only returned to staff.
+  cost:
+    oneOf:
+      - $ref: ../../../common/entities/money.yaml
+    description: |-
+      The shop's acquisition cost.
+      Returned to staff only.
+  availability:
+    oneOf:
+      - $ref: ../../entities/book.yaml#/$defs/BookAvailability
+    description: Whether the book can currently be ordered.
+required:
+  - id
+  - createdAt
+  - updatedAt
+  - title
+  - authorName
+  - isbn
+  - price
+  - availability

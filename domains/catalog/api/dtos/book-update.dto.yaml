@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# The write DTO for updating a book.
+# All fields are optional: a client sends only what changes.
+
+title: BookUpdateDto
+type: object
+description: The data that can be changed on an existing book.
+additionalProperties: false
+properties:
+  title:
+    type: string
+    description: The title of the book.
+  authorName:
+    type: string
+    description: The name of the book's author.
+  price:
+    oneOf:
+      - $ref: ../../../common/entities/money.yaml
+    description: The retail price of the book.
+  cost:
+    oneOf:
+      - $ref: ../../../common/entities/money.yaml
+    description: The shop's acquisition cost for the book.
+  availability:
+    oneOf:
+      - $ref: ../../entities/book.yaml#/$defs/BookAvailability
+    description: Whether the book can currently be ordered.

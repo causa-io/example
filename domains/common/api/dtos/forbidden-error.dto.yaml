@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# Shared error DTO for `403` responses (the caller is authenticated but not
+# allowed to perform the action).
+# Matches `ForbiddenErrorDto` from `@causa/runtime`.
+
+title: ForbiddenErrorDto
+type: object
+description: >-
+  Returned when the caller is not allowed to perform the requested action.
+additionalProperties: false
+properties:
+  statusCode:
+    type: integer
+    const: 403
+    description: The HTTP status code of the error.
+  errorCode:
+    type: string
+    const: forbidden
+    description: An error identifier, as a string.
+  message:
+    type: string
+    description: A human-readable description of the error.
+required:
+  - statusCode
+  - errorCode
+  - message

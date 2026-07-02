@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# Spanner is the source of truth, but clients (a customer's app) may require a
+# real-time view of their order history without polling the API.
+# Clients read Firestore directly. Access is enforced by the security rules in
+# firestore.rules.
+
+# Names are usually suffixed with `Document` to distinguish them from the entity
+# and make it clear that they are persisted in Firestore.
+title: OrderDocument
+type: object
+description: An order placed by a customer for one or more books.
+additionalProperties: false
+causa:
+  # The `causa.googleFirestoreCollection` extension declares the collection path
+  # and that documents carry a soft-delete marker (`deletedAt` by default).
+  googleFirestoreCollection:
+    # Documents live at `orders/{id}`, a flat collection keyed by the order ID.
+    path: [orders, property: id]
+    hasSoftDelete: true
+properties:
+  id:
+    type: string
+    format: uuid
+    description: The unique ID of the order.
+  createdAt:
+    type: string
+    format: date-time
+    description: The date at which the order was placed.
+  updatedAt:
+    type: string
+    format: date-time
+    description: The date at which the order was last updated.
+  deletedAt:
+    oneOf:
+      - type: string
+        format: date-time
+      - type: "null"
+    description: The date at which the order was deleted.
+  customer:
+    type: string
+    format: uuid
+    description: The ID of the customer who placed the order.
+  status:
+    oneOf:
+      - $ref: ../entities/order.yaml#/$defs/OrderStatus
+    description: The current status of the order.
+  lines:
+    type: array
+    items:
+      oneOf:
+        - $ref: ../entities/order.yaml#/$defs/OrderLine
+    description: The lines of the order.
+required:
+  - id
+  - createdAt
+  - updatedAt
+  - deletedAt
+  - customer
+  - status
+  - lines

@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# A reusable amount-of-money type, referenced by `$ref` from both domains
+# (Book price, Order line prices, Order total).
+# Putting it in `common/entities` and referencing it everywhere demonstrates the
+# cross-domain shared-value-object pattern, and guarantees money is represented
+# identically across the whole codebase.
+#
+# It has NO `causa.googleSpannerTable` extension. Money is not a table of its
+# own. When a Money field is part of an entity that maps to a Spanner table, it
+# is stored as a JSON column.
+# This is the standard way nested value objects are persisted.
+
+title: Money
+type: object
+description: A monetary amount in a single currency.
+additionalProperties: false
+properties:
+  amount:
+    type: integer
+    minimum: 0
+    description: The amount, in minor units of the currency (e.g. cents).
+  currency:
+    type: string
+    description: The ISO 4217 currency code of the amount (e.g. EUR).
+required:
+  - amount
+  - currency

@@ -1,0 +1,11 @@
+# Causa generates artefacts into `.causa/` (its own `node_modules`, the JSON
+# Schema for config validation, merged Firestore rules, etc).
+.causa/
+
+# Terraform working directories and state caches.
+.terraform/
+
+# Build and test outputs.
+dist/
+coverage/
+node_modules/

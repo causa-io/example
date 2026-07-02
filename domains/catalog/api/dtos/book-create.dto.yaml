@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# The write DTO for creating a book. It contains only client-supplied fields.
+# The server generates `id`/`createdAt`/`updatedAt` and `deletedAt` starts null.
+
+title: BookCreateDto
+type: object
+description: The data needed to add a new book to the catalogue.
+additionalProperties: false
+properties:
+  title:
+    type: string
+    description: The title of the book.
+  authorName:
+    type: string
+    description: The name of the book's author.
+  isbn:
+    type: string
+    description: The 13-digit ISBN-13 of the book.
+    causa:
+      # Additional validators can be added to the generated TypeScript class.
+      # DTOs are transformed and validated by NestJS pipes, so a 400 error will
+      # be returned if the client sends an invalid ISBN.
+      tsDecorators:
+        - source: "@Matches(/^(?=(?:\\D*\\d){10}(?:(?:\\D*\\d){3})?$)[\\d-]+$/)"
+          imports:
+            class-validator: [Matches]
+  price:
+    oneOf:
+      - $ref: ../../../common/entities/money.yaml
+    description: The retail price of the book.
+  cost:
+    oneOf:
+      - $ref: ../../../common/entities/money.yaml
+    description: The shop's acquisition cost for the book.
+  availability:
+    oneOf:
+      - $ref: ../../entities/book.yaml#/$defs/BookAvailability
+    description: The initial availability of the book.
+required:
+  - title
+  - authorName
+  - isbn
+  - price
+  - cost
+  - availability

@@ -1,0 +1,218 @@
+# A standard OpenAPI 3 document describing the Book endpoints.
+#
+# Usually, one OpenAPI document is defined per entity for clarity.
+# They are merged into a single document (including referenced DTOs) by the
+# `cs openapi genSpec` command.
+#
+# Causa's `typescriptNestjsController` generator turns it into a NestJS
+# controller contract. The implementation then decorates a class with
+# `@AsBookApiController()` to wire the routes, so paths, params, and status
+# codes come from this file, not from hand-written decorators.
+
+openapi: 3.2.0
+info:
+  title: Book API
+  description: The API to manage books in the catalogue.
+  version: 0.1.0
+
+# Use by the `typescriptNestjsController` generator to name symbols in code.
+x-causaResourceName: Book
+
+paths:
+  /books:
+    post:
+      summary: Adds a new book to the catalogue.
+      operationId: bookCreate
+      description: |-
+        Adds a new book.
+        Accessible to catalogue staff only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./dtos/book-create.dto.yaml
+      responses:
+        "201":
+          description: The book was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ./dtos/book-public.dto.yaml
+        "400":
+          description: The request was invalid.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/validation-error.dto.yaml
+        "403":
+          description: The caller is not allowed to manage the catalogue.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/forbidden-error.dto.yaml
+
+    get:
+      summary: Lists books in the catalogue.
+      operationId: bookList
+      description: |-
+        Lists books, most recently added first.
+        Accessible to any authenticated user.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: The maximum number of books to return.
+        - name: readAfter
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            The cursor returned by a previous page, to read the next page.
+      responses:
+        "200":
+          description: The page of books.
+          content:
+            application/json:
+              schema:
+                $ref: ./dtos/book-list.dto.yaml
+
+  /books/{id}:
+    get:
+      summary: Retrieves a book by its ID.
+      operationId: bookGet
+      description: |-
+        Retrieves a single book.
+        Accessible to any authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the book.
+      responses:
+        "200":
+          description: The book was found.
+          content:
+            application/json:
+              schema:
+                $ref: ./dtos/book-public.dto.yaml
+        "404":
+          description: The book was not found.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/not-found-error.dto.yaml
+
+    patch:
+      summary: Updates an existing book.
+      operationId: bookUpdate
+      description: |-
+        Updates a book.
+        Accessible to catalogue staff only.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the book to update.
+        # Optimistic concurrency: the client passes the `updatedAt` it last saw.
+        # If the book changed since, the server rejects the update with 409
+        # instead of silently overwriting a concurrent change.
+        - name: updatedAt
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: The version of the book the client is updating.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./dtos/book-update.dto.yaml
+      responses:
+        "200":
+          description: The book was updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ./dtos/book-public.dto.yaml
+        "400":
+          description: The request was invalid.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/validation-error.dto.yaml
+        "403":
+          description: The caller is not allowed to manage the catalogue.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/forbidden-error.dto.yaml
+        "404":
+          description: The book was not found.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/not-found-error.dto.yaml
+        "409":
+          description: The provided version does not match the current version.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/incorrect-version-error.dto.yaml
+
+    delete:
+      summary: Removes a book from the catalogue.
+      operationId: bookDelete
+      description: |-
+        Deletes a book.
+        Accessible to catalogue staff only.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the book to delete.
+        - name: updatedAt
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: The version of the book the client is deleting.
+      responses:
+        "204":
+          description: The book was deleted successfully.
+        "403":
+          description: The caller is not allowed to manage the catalogue.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/forbidden-error.dto.yaml
+        "404":
+          description: The book was not found.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/not-found-error.dto.yaml
+        "409":
+          description: The provided version does not match the current version.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/incorrect-version-error.dto.yaml
