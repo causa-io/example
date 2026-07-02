@@ -1,0 +1,191 @@
+# A standard OpenAPI 3 document describing the Order endpoints.
+#
+# Usually, one OpenAPI document is defined per entity for clarity.
+# They are merged into a single document (including referenced DTOs) by the
+# `cs openapi genSpec` command.
+#
+# Causa's `typescriptNestjsController` generator turns it into a NestJS
+# controller contract. The implementation then decorates a class with
+# `@AsOrderApiController()` to wire the routes, so paths, params, and status
+# codes come from this file, not from hand-written decorators.
+
+openapi: 3.2.0
+info:
+  title: Order API
+  description: The API to place and manage orders.
+  version: 0.1.0
+
+# Use by the `typescriptNestjsController` generator to name symbols in code.
+x-causaResourceName: Order
+
+paths:
+  /orders:
+    post:
+      summary: Places a new order.
+      operationId: orderPlace
+      description: >-
+        Places a new order for the authenticated customer.
+
+        Creates the order in the `pending` status.
+
+        Each line is validated against the catalogue (the book must exist and be
+        available).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./dtos/order-create.dto.yaml
+      responses:
+        "201":
+          description: The order was placed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ./dtos/order.dto.yaml
+        "400":
+          description: >-
+            The request was invalid, or a line referenced a missing/unavailable
+            book.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: ../../common/api/dtos/validation-error.dto.yaml
+                  - $ref: ./dtos/book-not-found-error.dto.yaml
+                  - $ref: ./dtos/book-unavailable-error.dto.yaml
+
+    get:
+      summary: Lists the caller's orders.
+      operationId: orderList
+      description: >-
+        Lists the authenticated customer's orders, most recent first.
+
+        Staff may list any customer's orders by passing the `customer` query
+        parameter.
+      parameters:
+        - name: customer
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |-
+            List a specific customer's orders instead of the caller's.
+            Staff only.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: The maximum number of orders to return.
+        - name: readAfter
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            The cursor returned by a previous page, to read the next page.
+      responses:
+        "200":
+          description: The page of orders.
+          content:
+            application/json:
+              schema:
+                $ref: ./dtos/order-list.dto.yaml
+        "403":
+          description: >-
+            A non-staff caller tried to list another customer's orders.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/forbidden-error.dto.yaml
+
+  /orders/{id}:
+    get:
+      summary: Retrieves an order by its ID.
+      operationId: orderGet
+      description: |-
+        Retrieves a single order.
+        Accessible to the order's customer and to staff.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the order.
+      responses:
+        "200":
+          description: The order was found.
+          content:
+            application/json:
+              schema:
+                $ref: ./dtos/order.dto.yaml
+        "404":
+          description: The order was not found.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/not-found-error.dto.yaml
+
+  /orders/{id}/process:
+    post:
+      summary: Starts processing a pending order.
+      operationId: orderProcess
+      description: |-
+        Starts processing a pending order, moving it to `processing`.
+        This in turn begins synchronizing with the third-party provider.
+        The order then becomes `confirmed` or `failed` asynchronously.
+
+        Only staff may process orders.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the order to process.
+        - name: updatedAt
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: The version of the order the client is processing.
+      responses:
+        "200":
+          description: The order entered processing.
+          content:
+            application/json:
+              schema:
+                $ref: ./dtos/order.dto.yaml
+        "400":
+          description: The order is not pending.
+          content:
+            application/json:
+              schema:
+                $ref: ./dtos/invalid-order-status-error.dto.yaml
+        "403":
+          description: The caller is not allowed to process this order.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/forbidden-error.dto.yaml
+        "404":
+          description: The order was not found.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/not-found-error.dto.yaml
+        "409":
+          description: The provided version does not match the current version.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/incorrect-version-error.dto.yaml

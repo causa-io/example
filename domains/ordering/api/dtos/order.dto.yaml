@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# The read representation of an Order returned by the ordering API.
+# Mirrors the entity, but excludes the `externalReference`, which is an internal
+# field.
+
+title: OrderPublicDto
+type: object
+description: An order as returned by the ordering API.
+additionalProperties: false
+properties:
+  id:
+    type: string
+    format: uuid
+    description: The unique ID of the order.
+  createdAt:
+    type: string
+    format: date-time
+    description: The date at which the order was placed.
+  updatedAt:
+    type: string
+    format: date-time
+    description: The date at which the order was last updated. Pass back as `updatedAt` on mutations.
+  customer:
+    type: string
+    format: uuid
+    description: The customer who placed the order.
+  status:
+    oneOf:
+      - $ref: ../../entities/order.yaml#/$defs/OrderStatus
+    description: The current status of the order.
+  lines:
+    type: array
+    items:
+      oneOf:
+        - $ref: ../../entities/order.yaml#/$defs/OrderLine
+    description: The priced lines of the order.
+required:
+  - id
+  - createdAt
+  - updatedAt
+  - customer
+  - status
+  - lines
