@@ -1,0 +1,207 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# This is the central entity of the only implemented service in the example.
+# It demonstrates:
+#   - A nested array of value objects (`lines`).
+#   - A status field driving a small state machine
+#     (pending → processing → confirmed / failed).
+
+title: Order
+type: object
+description: An order placed by a customer for one or more books.
+additionalProperties: false
+# The `causa.googleSpannerTable` extension marks this object as a Spanner table
+# and declares its primary key.
+# The code generator emits `@SpannerTable({ primaryKey: ['id'] })` on the
+# generated class, and `@SpannerColumn` on each property.
+causa:
+  googleSpannerTable:
+    primaryKey: [id]
+properties:
+  id:
+    type: string
+    format: uuid
+    description: The unique ID of the order.
+  createdAt:
+    type: string
+    format: date-time
+    description: The date at which the order was placed.
+  updatedAt:
+    type: string
+    format: date-time
+    description: The date at which the order was last updated.
+  deletedAt:
+    oneOf:
+      - type: string
+        format: date-time
+      - type: "null"
+    description: The date at which the order was deleted.
+  customer:
+    type: string
+    format: uuid
+    description: The ID of the customer who placed the order.
+  status:
+    # A closed enum is used here instead of a string with `enumHint`: the state
+    # machine is not expected to change, and adding a case would break the
+    # ordering logic.
+    oneOf:
+      - $ref: "#/$defs/OrderStatus"
+    description: The current status of the order.
+  lines:
+    type: array
+    items:
+      oneOf:
+        - $ref: "#/$defs/OrderLine"
+    description: The lines of the order (at least one).
+  externalReference:
+    oneOf:
+      - type: string
+      - type: "null"
+    description: The reference assigned by the third-party system on confirmation.
+required:
+  - id
+  - createdAt
+  - updatedAt
+  - deletedAt
+  - customer
+  - status
+  - lines
+  - externalReference
+
+$defs:
+  OrderLine:
+    title: OrderLine
+    type: object
+    description: A quantity of a single book within an order.
+    additionalProperties: false
+    properties:
+      book:
+        type: string
+        format: uuid
+        description: The ID of the ordered book.
+      quantity:
+        type: integer
+        description: The number of copies ordered (at least one).
+    required:
+      - book
+      - quantity
+
+  OrderStatus:
+    title: OrderStatus
+    type: string
+    enum:
+      - pending
+      - processing
+      - confirmed
+      - failed
+    description: The status of an order.
+
+  # See domains/catalog/entities/book.yaml for an explanation of constraints.
+  # Below are:
+  # - Loose "not deleted" and "deleted" constraints, sometimes used when nothing
+  #     more specific applies.
+  # - Status-specific constraints, which can be used both in the business logic
+  #     code and in test (mutation) expectations.
+  OrderNotDeletedConstraint:
+    title: OrderNotDeletedConstraint
+    type: object
+    description: An order that has not been deleted.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+    properties:
+      deletedAt:
+        type: "null"
+    required:
+      - deletedAt
+
+  OrderDeletedConstraint:
+    title: OrderDeletedConstraint
+    type: object
+    description: An order that has been deleted.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+    properties:
+      deletedAt:
+        type: string
+        format: date-time
+    required:
+      - deletedAt
+
+  OrderPendingConstraint:
+    title: OrderPendingConstraint
+    type: object
+    description: A pending order.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+    properties:
+      status:
+        const: pending
+      deletedAt:
+        type: "null"
+      externalReference:
+        type: "null"
+    required:
+      - status
+      - deletedAt
+      - externalReference
+
+  OrderProcessingConstraint:
+    title: OrderProcessingConstraint
+    type: object
+    description: An order being synchronized with the third-party system.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+    properties:
+      status:
+        const: processing
+      deletedAt:
+        type: "null"
+      externalReference:
+        type: "null"
+    required:
+      - status
+      - deletedAt
+      - externalReference
+
+  OrderConfirmedConstraint:
+    title: OrderConfirmedConstraint
+    type: object
+    description: A confirmed order.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+    properties:
+      status:
+        const: confirmed
+      deletedAt:
+        type: "null"
+      # The external reference must be set for a confirmed order.
+      externalReference:
+        type: string
+    required:
+      - status
+      - deletedAt
+      - externalReference
+
+  OrderFailedConstraint:
+    title: OrderFailedConstraint
+    type: object
+    description: An order that failed.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+    properties:
+      status:
+        const: failed
+      deletedAt:
+        type: "null"
+      externalReference:
+        type: "null"
+    required:
+      - status
+      - deletedAt
+      - externalReference

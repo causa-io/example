@@ -1,0 +1,148 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+
+title: OrderEvent
+type: object
+description: An event describing a change to an order.
+additionalProperties: false
+# Marks this schema as an "entity event": a wrapper carrying an entity payload
+# plus the standard envelope (id, producedAt, name).
+# Enables the versioned event processor and entity manager machinery in the
+# runtime, as well as mutation test helpers.
+causa:
+  entityEvent: true
+properties:
+  id:
+    type: string
+    format: uuid
+    description: The UUID of the event.
+  producedAt:
+    type: string
+    format: date-time
+    description: The business date at which the event was produced.
+  name:
+    type: string
+    # Using an `enumHint` here leaves the possibility to add new event names in
+    # the future while making clear to consumers that it won't be considered a
+    # breaking change.
+    # Consumers usually either:
+    # - Consume all events, regardless of name (e.g. to build a projection).
+    # - Consume specific events as trigger for some action.
+    causa:
+      enumHint: "#/$defs/OrderEventName"
+    description: The name of the event.
+  data:
+    oneOf:
+      - $ref: ../../entities/order.yaml
+    description: The order.
+required:
+  - id
+  - producedAt
+  - name
+  - data
+
+$defs:
+  OrderEventName:
+    title: OrderEventName
+    type: string
+    enum:
+      - orderPlaced
+      - orderProcessing
+      - orderConfirmed
+      - orderFailed
+    description: The name of an order event.
+
+  # See domains/catalog/events/book/v1.yaml for an explanation of constraints on
+  # events.
+  OrderPlacedEventConstraint:
+    title: OrderPlacedEventConstraint
+    type: object
+    description: An event indicating that a new order was placed.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+      # A creation: there is no prior state.
+      entityMutationFrom: [null]
+      entityPropertyChanges: "*"
+    properties:
+      name:
+        const: orderPlaced
+      data:
+        oneOf:
+          - $ref: ../../entities/order.yaml#/$defs/OrderPendingConstraint
+    required:
+      - name
+      - data
+
+  OrderProcessingEventConstraint:
+    title: OrderProcessingEventConstraint
+    type: object
+    description: >-
+      An event indicating that a pending order started third-party
+      synchronization.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+      entityMutationFrom:
+        - ../../entities/order.yaml#/$defs/OrderPendingConstraint
+      entityPropertyChanges:
+        - updatedAt
+        - status
+    properties:
+      name:
+        const: orderProcessing
+      data:
+        oneOf:
+          - $ref: ../../entities/order.yaml#/$defs/OrderProcessingConstraint
+    required:
+      - name
+      - data
+
+  OrderConfirmedEventConstraint:
+    title: OrderConfirmedEventConstraint
+    type: object
+    description: >-
+      An event indicating that a processing order was confirmed by the third
+      party.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+      entityMutationFrom:
+        - ../../entities/order.yaml#/$defs/OrderProcessingConstraint
+      entityPropertyChanges:
+        - updatedAt
+        - status
+        # `externalReference` becomes non-null.
+        # This matches the `OrderConfirmedConstraint`.
+        - externalReference
+    properties:
+      name:
+        const: orderConfirmed
+      data:
+        oneOf:
+          - $ref: ../../entities/order.yaml#/$defs/OrderConfirmedConstraint
+    required:
+      - name
+      - data
+
+  OrderFailedEventConstraint:
+    title: OrderFailedEventConstraint
+    type: object
+    description: An event indicating that an order failed.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+      entityMutationFrom:
+        - ../../entities/order.yaml#/$defs/OrderPendingConstraint
+        - ../../entities/order.yaml#/$defs/OrderProcessingConstraint
+      entityPropertyChanges:
+        - updatedAt
+        - status
+    properties:
+      name:
+        const: orderFailed
+      data:
+        oneOf:
+          - $ref: ../../entities/order.yaml#/$defs/OrderFailedConstraint
+    required:
+      - name
+      - data
