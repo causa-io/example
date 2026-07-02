@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# The response DTO for listing books.
+# List endpoints return a page of items plus an opaque cursor for the next page.
+# `readAfter` is null/absent on the last page.
+
+title: BookListDto
+type: object
+description: A page of books.
+additionalProperties: false
+properties:
+  items:
+    type: array
+    items:
+      $ref: ./book-public.dto.yaml
+    description: The books in this page.
+  readAfter:
+    oneOf:
+      - type: string
+      - type: "null"
+    description: |-
+      The cursor to pass as `readAfter` to fetch the next page.
+      Null on the last page.
+required:
+  - items
+  - readAfter
