@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=.causa/configuration-schema.yaml
+#
+# This is the root Causa configuration file. The presence of a `workspace.name`
+# key marks this directory as the workspace root. Causa discovers every
+# `causa.yaml` / `causa.*.yaml` below it, and merges configuration from the root
+# down to each project.
+#
+# Configuration is intentionally split across several `causa.*.yaml` files by
+# concern. They all merge into one effective configuration.
+#
+# The `$schema` comment above points the editor at a JSON Schema that Causa
+# generates into `.causa/` from the loaded modules, giving autocomplete and
+# validation for every key.
+#
+# In addition to keys defined by the schema, arbitrary configuration can be
+# added anywhere in Causa YAML files.
+
+workspace:
+  name: bookshop
+
+causa:
+  # Modules are npm packages that extend the CLI with new commands and
+  # behaviors. The set below is the standard stack for a TypeScript + Google
+  # Cloud + Terraform project.
+  modules:
+    "@causa/workspace-core": ^1.2.1
+    "@causa/workspace-google": ^1.2.0
+    "@causa/workspace-terraform": ^1.0.0
+    "@causa/workspace-typescript": ^1.2.0
+
+  secrets:
+    # The default backend used to resolve `${ secret('name') }` references in
+    # the configuration.
+    defaultBackend: google.secretManager
+
+# How Causa discovers the data model.
+# Every schema (entities, events, DTOs, Spanner projections, Firestore
+# documents) is a JSON Schema YAML file. These globs tell Causa where to find
+# them, for example for visualization in Causa Studio.
+model:
+  schema: jsonschema
+  globs:
+    - domains/*/entities/**/*.yaml
+    - domains/*/spanner/**/*.yaml
+    - domains/*/firestore/**/*.yaml
+    - domains/*/events/**/*.yaml
+    - domains/*/api/**/*.dto.yaml
+
+events:
+  format: json
+  broker: google.pubSub
+  topics:
+    # A topic's id is derived from the path of its schema file using these named
+    # capture groups.
+    # e.g. `domains/catalog/events/book/v1.yaml` → `catalog.book.v1`.
+    format: ${ domain }.${ topic }.${ version }
+    globs:
+      - domains/*/events/*/*.yaml
+    regularExpression: ^domains\/(?<domain>[\w-]+)\/events\/(?<topic>[\w-]+)\/(?<version>v\d+)\.yaml$
+
+infrastructure:
+  # The project that owns per-environment infrastructure, which
+  # `cs environment prepare/deploy` operates on.
+  environmentProject: infrastructure/backend
+
+# Default platforms for the two kinds of deployable code.
+# A `serviceContainer` project is packaged as a container and runs on Cloud Run.
+# A `serverlessFunctions` project deploys to Cloud Functions.
+# Cloud Functions are heavily discouraged and reserved for legacy use cases.
+serviceContainer:
+  platform: google.cloudRun
+
+serverlessFunctions:
+  platform: google.cloudFunctions

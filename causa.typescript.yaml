@@ -1,0 +1,124 @@
+# yaml-language-server: $schema=.causa/configuration-schema.yaml
+#
+# Settings consumed by `@causa/workspace-typescript`. This configures:
+# - The Node/npm toolchain versions and dependency policy.
+# - The code generators that turn schemas into TypeScript.
+# Plus the default Cloud Run sizing for TypeScript service containers.
+
+secrets:
+  # A short-lived Google access token, used as the npm auth token when
+  # installing or publishing the private `@bookshop-example/*` packages hosted
+  # on Google Artifact Registry.
+  # The `google.accessToken` backend mints it from the caller's credentials.
+  gcpAccessToken:
+    backend: google.accessToken
+
+javascript:
+  npm:
+    # The version checked by the `cs` command. A greater or equal minor version
+    # is accepted.
+    # Also used when building service container images.
+    version: 11.16.0
+
+    # Injected into the environment of every npm command `cs` runs.
+    # The `.npmrc` files reference it as `${NPM_TOKEN}` to authenticate against
+    # the private Artifact Registry.
+    environment:
+      NPM_TOKEN:
+        $format: ${ secret('gcpAccessToken') }
+  node:
+    # Used when building service container images.
+    version: 24.18.0
+
+  dependencies:
+    check:
+      # An CVE allowlist for `cs dep check`.
+      allowlist: []
+
+# Code generators run by `cs model genCode`.
+# Each reads schema YAML (resolved across the whole workspace) and writes
+# TypeScript file(s). Globs are relative to the project's directory (e.g.
+# `service`), hence the `../` to reach sibling schema folders in the domain.
+model:
+  codeGenerators:
+    # Entity/event/DTO/projection classes with persistence + validation
+    # decorators.
+    - generator: typescriptModelClass
+      # Automatically includes schemas of events consumed and produced by the
+      # project.
+      includeEvents: true
+      # Those globs are "entrypoints" for the scan, but any referenced schema
+      # from other domains will also be included in the generated file.
+      globs:
+        - ../entities/*.yaml
+        - ../spanner/*.yaml
+        - ../firestore/*.yaml
+        - ../events/*/*.yaml
+        - ../api/**/*.dto.yaml
+      output: src/model/generated.ts
+      # Additional configuration for decorators provided by the Google Causa
+      # module.
+      google:
+        spanner:
+          # Schemas that map to Spanner tables (entities + projections).
+          # Decorators will only be generated for these schemas (i.e. for the
+          # current domain).
+          globs:
+            - ../entities/*.yaml
+            - ../spanner/*.yaml
+          softDeletionColumn: deletedAt
+        firestore:
+          # Schemas that map to Firestore documents.
+          globs:
+            - ../firestore/*.yaml
+          pathAsArray: true
+
+    # Test factories: `makeOrder({ ...overrides })` producing valid instances.
+    - generator: typescriptTestObject
+      includeEvents: true
+      globs:
+        - ../entities/*.yaml
+        - ../spanner/*.yaml
+        - ../firestore/*.yaml
+        - ../events/*/*.yaml
+      output: src/model/make.test.ts
+
+    # Assertion helpers: `expectOrder(runner, expected)`.
+    - generator: typescriptTestExpectation
+      globs:
+        - ../entities/*.yaml
+        - ../spanner/*.yaml
+        - ../firestore/*.yaml
+        - ../events/*/*.yaml
+      output: src/model/expect.test.ts
+      entitiesGlobs:
+        - ../entities/*.yaml
+        - ../firestore/*.yaml
+        - ../spanner/*.yaml
+
+    # NestJS controller contracts generated from the OpenAPI specs.
+    - generator: typescriptNestjsController
+      globs:
+        - ../api/*.api.yaml
+      output: src/api/
+
+# Default Cloud Run sizing for every TypeScript service container.
+# A specific service may override these in its own causa.yaml, and an
+# environment may override them too.
+serviceContainer:
+  architecture: linux/amd64
+  cpuLimit: 1000m
+  memoryLimit: 512Mi
+  minInstances: 1
+  maxInstances: 10
+  environmentVariables:
+    # Cap V8's old-space below the container memory limit, leaving headroom for the rest of
+    # the Node process. 448 = 512 (limit) - 64 (process overhead) MiB.
+    NODE_OPTIONS: --max-old-space-size=448
+
+  # Provided to `docker build` so a service image can `npm install` the private
+  # `@bookshop-example/*` packages.
+  buildSecrets:
+    NPM_TOKEN:
+      value:
+        $format: ${ secret('gcpAccessToken') }

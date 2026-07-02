@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=.causa/configuration-schema.yaml
+#
+# Settings consumed by the `@causa/workspace-google` module.
+# These are workspace-wide and environment-independent. Anything that differs
+# between dev and prod lives in causa.environments.yaml instead.
+
+google:
+  # The GCP organization and billing account that own the projects.
+  organization: "000000000000"
+  billingAccount: "000000-000000-000000"
+
+  # The default region for resources (Cloud Run, Spanner, ...).
+  region: europe-west1
+
+  dns:
+    # A DNS managed zone (defined in the common infrastructure) used by every
+    # environment to expose its API under a subdomain.
+    # Note that this configuration is not defined by the Causa framework itself,
+    # it is an opinionated choice of the Bookshop example, then referenced by
+    # Terraform projects.
+    managedZone: bookshop-example
+
+  # Default configuration for Cloud Run services.
+  # This can be extended by each service.
+  cloudRun:
+    # Where built service images are pushed.
+    dockerRepository: europe-west1-docker.pkg.dev/bookshop-example-common/backend
+    location: europe-west1
+    cpuAlwaysAllocated: true
+
+  pubSub:
+    bigQueryStorage:
+      # Every event is also archived to BigQuery for analytics/replay.
+      # This is the dataset that receives the raw event stream.
+      rawEventsDatasetId: backend_events_raw
+      location: EU
+    # Exponential backoff bounds for Pub/Sub push subscriptions delivering to
+    # Cloud Run.
+    minimumBackoff: 0.5s
+    maximumBackoff: 60s
+
+  spanner:
+    # How Causa finds Spanner DDL files and which database each belongs to.
+    # The capture group `database` comes from the domain folder name:
+    # `domains/ordering/spanner/*.sql` all belong to the `ordering` database.
+    ddls:
+      format: ${ database }
+      globs:
+        - domains/*/spanner/*.sql
+      regularExpression: domains/(?<database>[\w-]+)\/spanner\/[\w-]+\.sql
+
+    # The single Spanner instance hosting every domain's database.
+    # Each domain owns one database inside this instance.
+    instance:
+      name: backend
+      configuration: regional-europe-west1
+      # Smallest sensible size. Prod overrides this in environments.
+      processingUnits: 100
+
+  firestore:
+    location: eur3
+    database: (default)
+    # Per-domain Firestore security rule fragments are merged into a single
+    # ruleset by the `GoogleFirestoreMergeRules` infrastructure processor,
+    # written to `.causa/`, then deployed to the real Firestore database by a
+    # Terraform module.
+    # This is also used by the local Firestore emulator.
+    securityRuleFiles:
+      - domains/*/firestore/*.rules
+    securityRuleFile: .causa/firestore.rules

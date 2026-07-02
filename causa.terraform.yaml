@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=.causa/configuration-schema.yaml
+#
+# Settings consumed by `@causa/workspace-terraform`.
+
+terraform:
+  # The version checked by the `cs` command. A greater or equal minor version is
+  # accepted.
+  version: "1.15"
