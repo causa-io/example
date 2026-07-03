@@ -22,6 +22,7 @@ CREATE TABLE Book (
   price JSON NOT NULL,
   cost JSON NOT NULL,
   availability STRING(MAX) NOT NULL,
+  genre STRING(MAX) NOT NULL,
 ) PRIMARY KEY (id),
 -- Soft-deleted rows are physically removed one day after `deletedAt`.
 -- Until then they remain queryable, but application queries filter them out

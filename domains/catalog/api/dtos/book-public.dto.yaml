@@ -47,6 +47,14 @@ properties:
     oneOf:
       - $ref: ../../entities/book.yaml#/$defs/BookAvailability
     description: Whether the book can currently be ordered.
+  genre:
+    # Open enum on the read path: a client that doesn't update the OpenAPI spec
+    # should still expect new genres to appear in the catalogue, and tolerate
+    # them.
+    type: string
+    causa:
+      enumHint: ../../entities/book.yaml#/$defs/BookGenre
+    description: The genre of the book.
 required:
   - id
   - createdAt
@@ -56,3 +64,4 @@ required:
   - isbn
   - price
   - availability
+  - genre

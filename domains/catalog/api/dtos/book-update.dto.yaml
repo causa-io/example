@@ -26,3 +26,8 @@ properties:
     oneOf:
       - $ref: ../../entities/book.yaml#/$defs/BookAvailability
     description: Whether the book can currently be ordered.
+  genre:
+    # Closed enum on the write path, like book-create.dto.yaml.
+    oneOf:
+      - $ref: ../../entities/book.yaml#/$defs/BookGenre
+    description: The genre of the book.

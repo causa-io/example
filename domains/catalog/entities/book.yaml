@@ -68,12 +68,22 @@ properties:
       The shop's acquisition cost for the book.
       Visible to staff only.
   availability:
-    # A closed enum is used here instead of a string with `enumHint` because the
-    # enum is not expected to change, and adding a new case would likely break
-    # existing logic.
+    # A closed enum is used here (rather than a string with `enumHint`) because
+    # the set is a small state machine not expected to change, and adding a case
+    # would likely break existing logic.
     oneOf:
       - $ref: "#/$defs/BookAvailability"
     description: Whether the book can currently be ordered.
+  genre:
+    # An open enum: the value is stored as a plain string, and `enumHint` only
+    # documents the known genres. The catalogue can therefore gain a genre
+    # without a breaking schema change, and readers tolerate unknown values.
+    # The write DTOs re-tighten this to a closed enum so clients can only submit
+    # a known genre — see the "open / closed enum" pattern.
+    type: string
+    causa:
+      enumHint: "#/$defs/BookGenre"
+    description: The genre of the book.
 required:
   - id
   - createdAt
@@ -85,6 +95,7 @@ required:
   - price
   - cost
   - availability
+  - genre
 
 $defs:
   BookAvailability:
@@ -95,6 +106,17 @@ $defs:
       - outOfStock
       - discontinued
     description: Whether a book can currently be ordered.
+
+  BookGenre:
+    title: BookGenre
+    type: string
+    enum:
+      - fiction
+      - nonFiction
+      - children
+      - poetry
+      - comics
+    description: A book genre a client may set through the API.
 
   # A "constraint" is a sub-schema that describes a specific state of the
   # entity. The `causa.constraintFor: "#"` extension links it to the root
