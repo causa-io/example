@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=../../../.causa/configuration-schema.yaml
+#
+# The Causa configuration at this level defines the service: its identity, the
+# HTTP paths it exposes, the events that trigger it, and the resources it
+# reads/writes.
+#
+# The infrastructure layer reads the generated form of this declaration to
+# create the Cloud Run service, its Pub/Sub subscriptions, etc.
+
+project:
+  name: ordering-service
+  description: The main service for the Ordering domain.
+  language: typescript
+  type: serviceContainer
+
+  # The version currently deployed. Updated during the release workflow and read
+  # by the infra layer.
+  activeVersion: release-0.1.0
+
+openApi:
+  global:
+    info:
+      title: Ordering API
+      description: The API for the Ordering domain in the Bookshop backend.
