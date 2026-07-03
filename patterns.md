@@ -21,3 +21,4 @@ The patterns this example repository demonstrates, each with a dedicated page.
 | --- | --- | --- | --- |
 | [Open / closed enum](patterns/open-closed-enum.md) | 🏷️ Architecture | 🪨 Stable | How to model an enumerated value in a Causa schema, and why a write DTO should use a closed enum even when the stored property is open. |
 | [Private npm package](patterns/private-npm-package.md) | 🔨 Tooling | 🪨 Stable | Share code across services: publish it as a versioned, private npm package on Artifact Registry. |
+| [Simple projection](patterns/simple-projection.md) | 📘 TypeScript · 🏷️ Architecture | 🪨 Stable | Maintain a local view of another domain's entity, built from that domain's unordered at least once event stream. |
