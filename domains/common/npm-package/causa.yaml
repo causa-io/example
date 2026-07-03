@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../../.causa/configuration-schema.yaml
+#
+# A `package` project is a reusable library rather than a deployable unit. Its
+# artefact is an npm tarball, not a container: `cs build` runs `npm run build`
+# then `npm pack`, and `cs publish` runs `npm publish` against the private
+# Artifact Registry (routed by the scope mapping in `.npmrc` — see that file and
+# package.json).
+
+project:
+  name: common-npm-package
+  description: Shared TypeScript building blocks for the Bookshop services.
+  language: typescript
+  type: package
+
+# A library exposes no HTTP surface, so there is no OpenAPI spec to generate.
+# Setting the whole `openApi` block to `null` opts the project out of the
+# OpenAPI tooling that service projects use.
+openApi: null

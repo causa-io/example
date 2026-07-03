@@ -20,3 +20,4 @@ The patterns this example repository demonstrates, each with a dedicated page.
 | Pattern | Tags | Maturity | Description |
 | --- | --- | --- | --- |
 | [Open / closed enum](patterns/open-closed-enum.md) | 🏷️ Architecture | 🪨 Stable | How to model an enumerated value in a Causa schema, and why a write DTO should use a closed enum even when the stored property is open. |
+| [Private npm package](patterns/private-npm-package.md) | 🔨 Tooling | 🪨 Stable | Share code across services: publish it as a versioned, private npm package on Artifact Registry. |
