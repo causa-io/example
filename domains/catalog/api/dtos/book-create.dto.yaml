@@ -37,6 +37,14 @@ properties:
     oneOf:
       - $ref: ../../entities/book.yaml#/$defs/BookAvailability
     description: The initial availability of the book.
+  genre:
+    # `Book.genre` is stored as an open string, but the write path accepts only
+    # the known subset: a closed `oneOf` + `$ref` to the same `$defs` enum, so
+    # an unknown genre is rejected with a 400 at validation. This is the "open /
+    # closed enum" guideline — tolerant at rest, strict at the edge.
+    oneOf:
+      - $ref: ../../entities/book.yaml#/$defs/BookGenre
+    description: The genre of the book.
 required:
   - title
   - authorName
@@ -44,3 +52,4 @@ required:
   - price
   - cost
   - availability
+  - genre
