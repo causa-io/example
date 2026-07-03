@@ -5,6 +5,7 @@
 // Pub/Sub and the transactional outbox is declared exactly once.
 
 import {
+  FirebaseModule,
   PubSubPublisherModule,
   SpannerModule,
   SpannerOutboxTransactionModule,
@@ -14,6 +15,9 @@ import { HealthModule } from './health.js';
 
 @Module({
   imports: [
+    // Provides Firebase-related services.
+    FirebaseModule.forRoot(),
+
     // Connects to the service's Spanner database (`ordering`).
     // Connection details come from the environment (`SPANNER_INSTANCE` /
     // `SPANNER_DATABASE`).

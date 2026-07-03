@@ -1,6 +1,6 @@
 // The event-handler container root.
 //
-// Booted when `EVENT_HANDLER=true` (the internal Cloud Run revision — see
+// Booted when `EVENT_HANDLER=true` (the internal Cloud Run service — see
 // domains/ordering/infrastructure/service.tf). It gathers every module that
 // registers trigger handlers.
 
@@ -9,9 +9,10 @@ import { PubSubEventHandlerInterceptor } from '@causa/runtime-google';
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { BaseModule } from './base.module.js';
+import { CatalogEventModule } from './catalog/event.module.js';
 
 @Module({
-  imports: [BaseModule],
+  imports: [BaseModule, CatalogEventModule],
   providers: [
     {
       // The interceptor that turns an incoming Pub/Sub push into the typed

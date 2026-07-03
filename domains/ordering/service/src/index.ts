@@ -33,7 +33,7 @@ const CORS_ALLOWED_ORIGINS = new RegExp(
 
 async function bootstrap(): Promise<void> {
   const app = EVENT_HANDLER
-    ?  await createApp(EventsModule, {
+    ? await createApp(EventsModule, {
         extraConfiguration: (app: NestExpressApplication) =>
           app.useBodyParser('json', { limit: EVENT_BODY_LIMIT }),
       })

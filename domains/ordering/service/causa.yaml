@@ -22,3 +22,35 @@ openApi:
     info:
       title: Ordering API
       description: The API for the Ordering domain in the Bookshop backend.
+
+google:
+  cloudRun:
+    # The name of the Cloud Run service used to replay historical events into
+    # this service's handlers. Here, backfills are directed to the internal
+    # event-handler service, not to the (default) public API service.
+    eventBackfillServiceName: ordering-events
+
+serviceContainer:
+  # Triggers are non-HTTP entry points. Each creates a Pub/Sub push
+  # subscription, a Cloud Scheduler job, a Cloud Tasks queue, etc. that calls
+  # the service over HTTP at the given `endpoint.path`.
+  # The same container serves both the public API and these handlers.
+  # The infra layer deploys it twice (a public API service and an internal
+  # event-handler service) — see domains/ordering/infrastructure/service.tf.
+  triggers:
+    # Consume the upstream catalogue: build the local BookProjection.
+    # Processes `catalog.book.v1` events and idempotently updates the
+    # `BookProjection` table in Spanner.
+    handleBookForProjection:
+      type: event
+      topic: catalog.book.v1
+      endpoint:
+        type: http
+        path: /catalog/handleBookForProjection
+
+  # What this service produces/owns.
+  # Drives infrastructure provisioning (e.g. IAM permissions).
+  outputs:
+    # The Spanner database this service owns, as `<instance>.<database>`.
+    google.spanner:
+      - backend.ordering
