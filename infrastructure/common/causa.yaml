@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=../../.causa/configuration-schema.yaml
+#
+# This project contains resources shared by every environment and not tied to
+# any one of them. It lives in its own fixed GCP project and uses the single
+# `default` Terraform workspace (it has no per-env state, unlike the backend
+# infrastructure).
+
+project:
+  name: infrastructure-common
+  description: Base infrastructure shared by all environments.
+  language: terraform
+  type: infrastructure
+
+terraform:
+  # Not environment-specific: always the default workspace.
+  workspace: default
+
+infrastructure:
+  processors:
+    # Enable the GCP APIs listed under `google.services` before applying.
+    - name: GoogleServicesEnable
+
+  # Terraform input variables, sourced from configuration.
+  variables:
+    gcp_common_project_id:
+      $format: ${ configuration('google.project') }
+    gcp_region:
+      $format: ${ configuration('google.region') }
+    gcp_organization:
+      $format: ${ configuration('google.organization') }
+    gcp_billing_account:
+      $format: ${ configuration('google.billingAccount') }
+
+google:
+  # The dedicated, environment-independent project for shared resources.
+  project: bookshop-example-common
+
+  services:
+    - artifactregistry.googleapis.com
+    - cloudresourcemanager.googleapis.com
+    - iam.googleapis.com
+    - secretmanager.googleapis.com
+    - serviceusage.googleapis.com
+    - storage.googleapis.com
