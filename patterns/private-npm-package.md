@@ -96,15 +96,15 @@ The same `.npmrc` is a natural place to add supply-chain safeguards. Consider la
 - TypeScript build config —
   [tsconfig.json](../domains/common/npm-package/tsconfig.json).
 
-**A consuming service — the ordering service:**
+**A consuming service — the catalog service:**
 
 - Manifest depending on the package —
-  [package.json](../domains/ordering/service/package.json)
+  [package.json](../domains/catalog/service/package.json)
   (`@bookshop-example/common: ^0.1.0`).
 - The same registry + auth —
-  [.npmrc](../domains/ordering/service/.npmrc).
+  [.npmrc](../domains/catalog/service/.npmrc).
 - TypeScript build config —
-  [tsconfig.json](../domains/ordering/service/tsconfig.json).
+  [tsconfig.json](../domains/catalog/service/tsconfig.json).
 
 **The Causa wiring:**
 

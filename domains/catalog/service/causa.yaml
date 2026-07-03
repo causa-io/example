@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../../../.causa/configuration-schema.yaml
+#
+# The Causa configuration at this level defines the service: its identity, the
+# HTTP paths it exposes, the events that trigger it, and the resources it
+# reads/writes.
+#
+# The infrastructure layer reads the generated form of this declaration to
+# create the Cloud Run service, its Pub/Sub subscriptions, etc.
+
+project:
+  name: catalog-service
+  description: The main service for the Catalog domain.
+  language: typescript
+  type: serviceContainer
+  activeVersion: release-0.1.0
+
+openApi:
+  global:
+    info:
+      title: Catalog API
+      description: The API for the Catalog domain in the Bookshop backend.
+
+serviceContainer:
+  # The public HTTP API surface.
+  # These map to the routes described in ../api/book.api.yaml.
+  endpoints:
+    http:
+      - /books
+
+  # What this service produces/owns.
+  # Drives infrastructure provisioning (e.g. IAM permissions).
+  outputs:
+    # The Pub/Sub topics this service publishes events to.
+    eventTopics:
+      - catalog.book.v1
+    # The Spanner database this service owns, as `<instance>.<database>`.
+    google.spanner:
+      - backend.catalog
