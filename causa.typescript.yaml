@@ -34,6 +34,11 @@ javascript:
     check:
       # An CVE allowlist for `cs dep check`.
       allowlist: []
+    update:
+      packageTargets:
+        # When updating packages, the Node.js types should stay in sync with the
+        # Node.js version used in the service container.
+        "@types/node": minor
 
 # Code generators run by `cs model genCode`.
 # Each reads schema YAML (resolved across the whole workspace) and writes
