@@ -993,10 +993,9 @@ export class OrderListDto {
   readonly items!: OrderPublicDto[];
 
   /**
-   * The cursor to pass as `readAfter` to fetch the next page.
-   * Null on the last page.
+   * The query string to append to the list path to fetch the next page (e.g. `?limit=20&readAfter=…`). Null on the last page.
    */
   @_CausaRuntimeIsNullable()
   @_ClassValidatorIsString()
-  readonly readAfter!: string | null;
+  readonly nextPageQuery!: string | null;
 }
