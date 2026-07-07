@@ -1,0 +1,88 @@
+# yaml-language-server: $schema=../../.causa/configuration-schema.yaml
+#
+# The Causa configuration for the backend infrastructure (per-environment)
+# project.
+#
+# This project is deployed once per environment
+# (`cs environment prepare|deploy -e dev`), each into its own Terraform
+# workspace and GCP project.
+#
+# The key idea: most of this infrastructure is GENERATED from the domain schemas
+# by the `infrastructure.processors` below, which run before every plan/apply
+# (prepare/deploy) and write artefacts into `.causa/`.
+# The Terraform here just wires published modules to those artefacts.
+
+project:
+  name: infrastructure-backend
+  description: The infrastructure for a single backend environment.
+  language: terraform
+  type: infrastructure
+
+  # A change to any of these source files must re-plan this infrastructure
+  # project, because the generated topics / DDL / rules / service config are
+  # derived from them. This is what makes a schema change automatically flow
+  # through to an infrastructure change in CI.
+  externalFiles:
+    # Event definitions → Pub/Sub topics.
+    - domains/*/events/*/*.yaml
+    # Firestore rule fragments → merged ruleset.
+    - domains/*/firestore/*.rules
+    # Per-domain Terraform modules (e.g. the ordering service).
+    - domains/*/infrastructure/**
+    # Spanner DDL → database schema.
+    - domains/*/spanner/*.sql
+    # Service declarations carry the active version to deploy.
+    - domains/*/service/causa.yaml
+
+infrastructure:
+  # Processors run in order before plan/apply, each writing generated inputs
+  # into `.causa/`:
+  processors:
+    # Enable the APIs under `google.services`.
+    - name: GoogleServicesEnable
+    # Merge domain *.rules → .causa/firestore.rules.
+    - name: GoogleFirestoreMergeRules
+    # Write per-project config JSON consumed by modules.
+    - name: ProjectWriteConfigurations
+    # Emit Spanner DDL bundles into .causa/spanner-databases.
+    - name: GoogleSpannerWriteDatabases
+    # Emit topic configs into .causa/pubsub-topics.
+    - name: GooglePubSubWriteTopics
+
+  # Terraform variables sourced from configuration (which already merged in the
+  # selected environment's overrides).
+  variables:
+    gcp_backend_project_id:
+      $format: ${ configuration('google.project') }
+    gcp_common_project_id: bookshop-example-common
+    gcp_region:
+      $format: ${ configuration('google.region') }
+    gcp_dns_managed_zone:
+      $format: ${ configuration('google.dns.managedZone') }
+    base_dns_name:
+      $format: ${ configuration('dns.base') }
+    docker_repository_name: backend
+    firestore_database_name:
+      $format: ${ configuration('google.firestore.database') }
+    firestore_location_id:
+      $format: ${ configuration('google.firestore.location') }
+    firestore_security_rules_file:
+      $format: ${ configuration('google.firestore.securityRuleFile') }
+
+google:
+  # The APIs required for the backend to run.
+  # Enabled by the GoogleServicesEnable processor.
+  services:
+    - artifactregistry.googleapis.com
+    - cloudscheduler.googleapis.com
+    - compute.googleapis.com
+    - eventarc.googleapis.com
+    - firebase.googleapis.com
+    - firestore.googleapis.com
+    - iam.googleapis.com
+    - logging.googleapis.com
+    - monitoring.googleapis.com
+    - pubsub.googleapis.com
+    - run.googleapis.com
+    - spanner.googleapis.com
+    - storage.googleapis.com
