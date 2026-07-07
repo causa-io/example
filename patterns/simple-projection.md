@@ -90,6 +90,20 @@ export class CatalogEventController implements CatalogEventsContract {
 }
 ```
 
+### The projection service also serves reads of the view
+
+The `VersionedEventProcessor` subclass does more than consume events. Its one job is to maintain the `BookProjection` view — and because it *owns* that view, it also owns **access** to it. Reads against the projection ("do these books exist, and can they be ordered?") are methods on the same service, not a separate lookup service. The consumer that needs the answer states the rule and delegates the read to the owner of the view:
+
+```typescript
+// A method on BookProjectionService, alongside project():
+async validateAvailable(bookIds: string[], options: SpannerReadOnlyStateTransactionOption) {
+  const { entityManager } = this.runner; // the transaction runner exposes the SpannerEntityManager
+  // ...read the projection rows, then throw BookNotFoundError / BookUnavailableError...
+}
+```
+
+Keeping reads on the owner means a query against the view — its columns, its `deletedAt IS NULL` filter — is written once, next to the code that shapes the view, and every consumer goes through it.
+
 ## In this repository
 
 **The projection model:**
@@ -110,7 +124,9 @@ export class CatalogEventController implements CatalogEventsContract {
 
 - The trigger declaration —
   [service/causa.yaml](../domains/ordering/service/causa.yaml) (`handleBookForProjection`).
-- The processor (`VersionedEventProcessor`, `project()`, version property) —
+- The processor (`VersionedEventProcessor`, `project()`, version property) and
+  the read side that owns access to the view (`validateAvailable`, used by order
+  validation — see [Validator service](validator-service.md)) —
   [book-projection.service.ts](../domains/ordering/service/src/catalog/book-projection.service.ts).
 - The thin controller —
   [event.controller.ts](../domains/ordering/service/src/catalog/event.controller.ts).
