@@ -31,6 +31,12 @@ google:
     eventBackfillServiceName: ordering-events
 
 serviceContainer:
+  # The public HTTP API surface.
+  # These map to the routes described in ../api/order.api.yaml.
+  endpoints:
+    http:
+      - /orders
+
   # Triggers are non-HTTP entry points. Each creates a Pub/Sub push
   # subscription, a Cloud Scheduler job, a Cloud Tasks queue, etc. that calls
   # the service over HTTP at the given `endpoint.path`.
@@ -48,9 +54,48 @@ serviceContainer:
         type: http
         path: /catalog/handleBookForProjection
 
+    # ── Mirror orders into the Firestore read model ─────────────────────────────────────
+    # Subscribes to this service's OWN order events and writes the OrderDocument so the
+    # customer's app gets a real-time order history.
+    handleOrderForFirestore:
+      type: event
+      topic: ordering.order.v1
+      endpoint:
+        type: http
+        path: /orders/handleOrderForFirestore
+
+    # ── Synchronise a processing order with the third-party provider ────────────────────
+    # Subscribes to this service's own order events, filtered to `orderProcessing`. The
+    # handler calls the third-party system (e.g. a payment/fulfilment provider) and emits
+    # `orderConfirmed` on success or `orderFailed` on rejection — resolving the `processing`
+    # state. The subscription filter keeps this handler from seeing other order events.
+    handleOrderProcessing:
+      type: event
+      topic: ordering.order.v1
+      endpoint:
+        type: http
+        path: /orders/handleOrderProcessing
+      google.pubSub:
+        filter: attributes.eventName = "orderProcessing"
+
+    # ── Expire stale pending orders ─────────────────────────────────────────────────────
+    # A scheduled job: pending orders older than the allowed window are auto-failed.
+    expirePendingOrders:
+      type: cron
+      schedule: every 1 hours
+      endpoint:
+        type: http
+        path: /orders/expirePendingOrders
+
   # What this service produces/owns.
   # Drives infrastructure provisioning (e.g. IAM permissions).
   outputs:
+    # The Pub/Sub topic(s) this service publishes to.
+    eventTopics:
+      - ordering.order.v1
     # The Spanner database this service owns, as `<instance>.<database>`.
     google.spanner:
       - backend.ordering
+    # The Firestore collection(s) this service maintains.
+    google.firestore:
+      - orders
