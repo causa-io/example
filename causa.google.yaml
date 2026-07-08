@@ -68,3 +68,9 @@ google:
     securityRuleFiles:
       - domains/*/firestore/*.rules
     securityRuleFile: .causa/firestore.rules
+
+  # Although this repository does not use them, Firebase Storage security rules
+  # are also supported.
+  firebaseStorage:
+    securityRuleFiles: []
+    securityRuleFile: .causa/storage.rules
