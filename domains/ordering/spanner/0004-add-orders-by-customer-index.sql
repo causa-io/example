@@ -1,0 +1,17 @@
+-- Secondary index backing the customer-scoped, most-recent-first order listing
+-- (`GET /orders`, see order/query.service.ts).
+--
+-- Keyset (a.k.a. token / cursor) pagination reads a page as an ordered range
+-- scan seeded from the previous page's last row. For that to be efficient and
+-- stable, the index key must be exactly the columns the query orders by, in the
+-- same direction:
+--
+--   * `customer` first — every listing filters to one customer, so it is the
+--     leading (equality) column that positions the scan.
+--   * `createdAt DESC` — "most recent first".
+--   * `id` — a tie-breaker. `createdAt` is not guaranteed unique (two orders
+--     could share a commit timestamp), so pagination keys on the pair
+--     `(createdAt, id)` to get a total order.
+--
+-- Soft-deleted rows are filtered in the query with `WHERE deletedAt IS NULL`.
+CREATE INDEX OrdersByCustomer ON `Order`(customer, createdAt DESC, id)

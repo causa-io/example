@@ -32,10 +32,14 @@ import { OrderAuthorizationService } from './authorization.service.js';
 import {
   bookNotFoundErrorAsDto,
   bookUnavailableErrorAsDto,
+  forbiddenErrorAsDto,
   orderNotFoundErrorAsDto,
   toOrderPublicDto,
 } from './dto.utils.js';
+import { OrderListQueryDto } from './list-query.dto.js';
+import { OrderQueryService } from './query.service.js';
 import { OrderService } from './service.js';
+import { ORDER_LIST_LIMITS, OrderPageQuery } from './types.js';
 
 /**
  * Handles the `/orders` HTTP API.
@@ -45,6 +49,7 @@ export class OrderApiController implements OrderApiContract {
   constructor(
     private readonly runner: SpannerOutboxTransactionRunner,
     private readonly service: OrderService,
+    private readonly queryService: OrderQueryService,
     private readonly authorizationService: OrderAuthorizationService,
     private readonly logger: Logger,
   ) {
@@ -94,9 +99,37 @@ export class OrderApiController implements OrderApiContract {
     return toOrderPublicDto(order);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async list(_query: OrderListQueryParams): Promise<OrderListDto> {
-    throw new NotImplementedException();
+  @TryMap(forbiddenErrorAsDto)
+  async list(
+    query: OrderListQueryParams,
+    @AuthUser() actor: User,
+  ): Promise<OrderListDto> {
+    // Default to the caller's own orders.
+    // A staff member may target a specific `customer`.
+    const customer = query.customer ?? actor.id;
+    this.authorizationService.validateCanList(actor, customer);
+    this.logger.assign({ customer });
+
+    // Parse + validate the raw params (decoding the opaque `readAfter` cursor),
+    // then default and cap the page size.
+    const validatedQuery = (
+      await OrderListQueryDto.fromParams(query)
+    ).withLimit(ORDER_LIST_LIMITS);
+
+    // Hand the query service the plain domain query.
+    const page = await this.queryService.listByCustomer(
+      customer,
+      new OrderPageQuery({
+        limit: validatedQuery.limit,
+        readAfter: validatedQuery.readAfter,
+      }),
+    );
+
+    // Convert the stored `Order`s to the public DTO. Passing `validatedQuery`
+    // (which carries the opaque-cursor decorator) lets `map` rebuild
+    // `page.nextPageQuery` with the typing from `validatedQuery`
+    // (`OrderListQueryDto`).
+    return page.map(toOrderPublicDto, validatedQuery).serialize();
   }
 
   async process(

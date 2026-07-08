@@ -6,6 +6,7 @@
 
 import { type User } from '@causa/runtime';
 import { Injectable } from '@nestjs/common';
+import { ForbiddenError } from '../errors.js';
 import { Order } from '../model/generated.js';
 import { OrderNotFoundError } from './errors.js';
 
@@ -30,6 +31,25 @@ export class OrderAuthorizationService {
     }
 
     throw new OrderNotFoundError();
+  }
+
+  /**
+   * Authorizes listing a customer's orders: the customer themselves, or any
+   * staff member.
+   *
+   * Unlike {@link OrderAuthorizationService.validateCanRead}, this answers a
+   * disallowed request with `403`, not `404`: the caller named a customer
+   * explicitly, so there is nothing to hide by pretending the listing is empty.
+   *
+   * @param actor The authenticated caller.
+   * @param customer The customer whose orders are being listed.
+   */
+  validateCanList(actor: User, customer: string): void {
+    if (customer === actor.id || this.isStaff(actor)) {
+      return;
+    }
+
+    throw new ForbiddenError();
   }
 
   /**

@@ -27,3 +27,4 @@ The patterns this example repository demonstrates, each with a dedicated page.
 | [Controller / Service / Manager split](patterns/service-layering.md) | 📘 TypeScript · 🏷️ Architecture | 🪨 Stable | How to layer Controller (HTTP) → Service (commands) → Manager (`VersionedEntityManager` writes + events), and where authorization — including the manager's `validationFn` hook — fits. |
 | [Authorization service](patterns/authorization-service.md) | 📘 TypeScript | 🪨 Stable | Centralize authorization decisions in one injectable reused by controllers and state-change validation. |
 | [Validator service](patterns/validator-service.md) | 📘 TypeScript | 🪨 Stable | Split command data sanitization and validation logic into its own service. |
+| [Pagination](patterns/pagination.md) | 📘 TypeScript | 💡 Recommended | Implement a list endpoint: keyset (token) pagination in a `QueryService`, using the runtime `PageQuery` / `Page` / opaque cursor. |
