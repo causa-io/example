@@ -15,7 +15,7 @@ import {
   SpannerReadOnlyStateTransaction,
 } from '@causa/runtime-google';
 import { Injectable } from '@nestjs/common';
-import { Order, OrderEvent } from '../model/generated.js';
+import { Order, OrderBookIndex, OrderEvent } from '../model/generated.js';
 import { OrderNotFoundError } from './errors.js';
 
 /**
@@ -46,5 +46,48 @@ export class OrderManager extends VersionedEntityManager<
    */
   protected throwNotFoundError(): never {
     throw new OrderNotFoundError();
+  }
+
+  /**
+   * Writes the `Order` row *and* keeps its `OrderBook` index in sync, so the
+   * books inside the order stay queryable (see the "array indexing via custom
+   * projection" pattern).
+   *
+   * Every create / update / delete funnels through this one hook, so the index
+   * is maintained on all of them, atomically with the order write and its
+   * outbox event.
+   *
+   * The re-write is a full replace, and it leans on Spanner semantics:
+   * `super.updateState` writes the order with a REPLACE (delete + insert of the
+   * row).
+   * Because `OrderBook` is `INTERLEAVE IN PARENT Order ON DELETE CASCADE`, that
+   * REPLACE also deletes every existing `OrderBook` row of this order.
+   * This method never deletes anything itself, it only (re-)inserts the current
+   * set. If the base write ever stopped using REPLACE, stale rows would leak.
+   *
+   * @param order The order being written (its post-change state).
+   * @param transaction The read-write transaction the order write runs in.
+   */
+  protected async updateState(
+    order: Order,
+    transaction: SpannerOutboxTransaction,
+  ): Promise<void> {
+    await super.updateState(order, transaction);
+
+    // A soft-deleted order must vanish from every book listing. The parent
+    // REPLACE above already cascade-cleared its rows. Leaving them gone (not
+    // re-adding any) is the whole deletion.
+    if (order.deletedAt) {
+      return;
+    }
+
+    // One row per ordered book. `lines` is de-duplicated by book upstream (the
+    // validator merges lines referencing the same book), so each yields a
+    // distinct `(id, book)` primary key and none collide.
+    for (const { book } of order.lines) {
+      await transaction.set(
+        new OrderBookIndex({ id: order.id, book, createdAt: order.createdAt }),
+      );
+    }
   }
 }

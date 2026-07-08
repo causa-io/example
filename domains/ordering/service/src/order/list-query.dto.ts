@@ -64,6 +64,10 @@ export class OrderListQueryDto
   @IsUUID()
   readonly customer?: string;
 
+  @AllowMissing()
+  @IsUUID()
+  readonly book?: string;
+
   @CustomReadAfterType()
   readonly readAfter?: OrderListReadAfterDto = undefined;
 

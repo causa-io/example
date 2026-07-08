@@ -10,7 +10,7 @@
 
 import { TryMap, type User } from '@causa/runtime';
 import { SpannerOutboxTransactionRunner } from '@causa/runtime-google';
-import { AuthUser, Logger } from '@causa/runtime/nestjs';
+import { AuthUser, Logger, Page } from '@causa/runtime/nestjs';
 import { NotImplementedException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
@@ -24,6 +24,7 @@ import {
   type OrderApiContract,
 } from '../api/order.api.controller.js';
 import {
+  Order,
   OrderCreateDto,
   OrderListDto,
   OrderPublicDto,
@@ -115,21 +116,53 @@ export class OrderApiController implements OrderApiContract {
     const validatedQuery = (
       await OrderListQueryDto.fromParams(query)
     ).withLimit(ORDER_LIST_LIMITS);
+    const pageQuery = new OrderPageQuery({
+      limit: validatedQuery.limit,
+      readAfter: validatedQuery.readAfter,
+    });
 
-    // Hand the query service the plain domain query.
-    const page = await this.queryService.listByCustomer(
-      customer,
-      new OrderPageQuery({
-        limit: validatedQuery.limit,
-        readAfter: validatedQuery.readAfter,
-      }),
-    );
+    // A `book` filter selects the staff-only, cross-customer listing (every
+    // order containing that book, served by a different index), otherwise the
+    // listing is scoped to a customer. Each branch authorizes before it reads.
+    const page =
+      validatedQuery.book != null
+        ? await this.listByBook(actor, validatedQuery.book, pageQuery)
+        : await this.listByCustomer(actor, validatedQuery.customer, pageQuery);
 
     // Convert the stored `Order`s to the public DTO. Passing `validatedQuery`
     // (which carries the opaque-cursor decorator) lets `map` rebuild
     // `page.nextPageQuery` with the typing from `validatedQuery`
     // (`OrderListQueryDto`).
     return page.map(toOrderPublicDto, validatedQuery).serialize();
+  }
+
+  /**
+   * Authorizes and reads the staff-only listing of every order containing a
+   * book (across all customers), via the companion `OrderBook` index.
+   */
+  private listByBook(
+    actor: User,
+    book: string,
+    query: OrderPageQuery,
+  ): Promise<Page<Order, OrderPageQuery>> {
+    this.logger.assign({ book });
+    this.authorizationService.validateCanListByBook(actor);
+    return this.queryService.listByBook(book, query);
+  }
+
+  /**
+   * Authorizes and reads a customer-scoped listing: the caller's own orders by
+   * default, or — for staff — a specific `customer`'s.
+   */
+  private listByCustomer(
+    actor: User,
+    customer: string | undefined,
+    query: OrderPageQuery,
+  ): Promise<Page<Order, OrderPageQuery>> {
+    const target = customer ?? actor.id;
+    this.logger.assign({ customer: target });
+    this.authorizationService.validateCanList(actor, target);
+    return this.queryService.listByCustomer(target, query);
   }
 
   async process(
