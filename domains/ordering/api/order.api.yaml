@@ -62,7 +62,7 @@ paths:
         Lists the authenticated customer's orders, most recent first.
 
         Staff may list any customer's orders by passing the `customer` query
-        parameter.
+        parameter, or every order containing a given book by passing `book`.
       parameters:
         - name: customer
           in: query
@@ -73,6 +73,15 @@ paths:
           description: |-
             List a specific customer's orders instead of the caller's.
             Staff only.
+        - name: book
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |-
+            List every order containing this book, across all customers.
+            Staff only. Takes precedence over `customer`.
         - name: limit
           in: query
           required: false
