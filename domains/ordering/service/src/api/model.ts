@@ -41,6 +41,14 @@ export class OrderListQueryParams {
   readonly customer?: string;
 
   /**
+   * List every order containing this book, across all customers.
+   * Staff only. Takes precedence over `customer`.
+   */
+  @_CausaRuntimeAllowMissing()
+  @_ClassValidatorIsUuid(undefined)
+  readonly book?: string;
+
+  /**
    * The maximum number of orders to return.
    */
   @_CausaRuntimeAllowMissing()

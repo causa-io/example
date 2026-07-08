@@ -8,6 +8,7 @@ import {
   BookProjection,
   Money,
   Order,
+  OrderBookIndex,
   OrderDocument,
   OrderEvent,
   OrderLine,
@@ -146,6 +147,17 @@ export function makeBookEvent(data: Partial<BookEvent> = {}): BookEvent {
     id: _CryptoRandomUuid(),
     name: 'bookCreated',
     producedAt: new Date(),
+    ...data,
+  });
+}
+
+export function makeOrderBookIndex(
+  data: Partial<OrderBookIndex> = {},
+): OrderBookIndex {
+  return new OrderBookIndex({
+    book: _CryptoRandomUuid(),
+    createdAt: new Date(),
+    id: _CryptoRandomUuid(),
     ...data,
   });
 }

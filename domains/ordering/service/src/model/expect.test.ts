@@ -16,6 +16,7 @@ import {
   BookAvailability,
   BookProjection,
   Order,
+  OrderBookIndex,
   OrderDocument,
   OrderEvent,
   OrderLine,
@@ -497,6 +498,38 @@ export async function expectBookProjectionNotToExist(
 ): Promise<void> {
   const actual = await runner.run({ readOnly: true }, (t) =>
     t.get(BookProjection, key),
+  );
+  expect(actual).toEqual(null);
+}
+
+export async function expectOrderBookIndex(
+  runner: _CausaRuntimeTransactionRunner<
+    _CausaRuntimeTransaction,
+    _CausaRuntimeReadOnlyStateTransaction
+  >,
+  expected: Partial<OrderBookIndex>,
+): Promise<OrderBookIndex> {
+  const actual = await runner.run({ readOnly: true }, (t) =>
+    t.get(OrderBookIndex, expected),
+  );
+  expect(actual).toEqual({
+    book: expect.any(String),
+    createdAt: expect.any(Date),
+    id: expect.any(String),
+    ...expected,
+  });
+  return actual as OrderBookIndex;
+}
+
+export async function expectOrderBookIndexNotToExist(
+  runner: _CausaRuntimeTransactionRunner<
+    _CausaRuntimeTransaction,
+    _CausaRuntimeReadOnlyStateTransaction
+  >,
+  key: Partial<OrderBookIndex>,
+): Promise<void> {
+  const actual = await runner.run({ readOnly: true }, (t) =>
+    t.get(OrderBookIndex, key),
   );
   expect(actual).toEqual(null);
 }

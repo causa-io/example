@@ -28,7 +28,7 @@ import {
 export interface OrderApiContract {
   /**
    * Lists the authenticated customer's orders, most recent first.
-   * Staff may list any customer's orders by passing the `customer` query parameter.
+   * Staff may list any customer's orders by passing the `customer` query parameter, or every order containing a given book by passing `book`.
    *
    * @param query The query parameters.
    * @returns The page of orders.

@@ -450,6 +450,41 @@ export class BookEvent {
 }
 
 /**
+ * One row per book contained in an order, materialized so orders can be looked up and paginated by book. Denormalizes the order's `createdAt` so the listing is ordered straight from the index, without touching the `Order` row.
+ */
+@_CausaRuntimeGoogleSpannerTable({
+  primaryKey: ['id', 'book'],
+  name: 'OrderBook',
+})
+export class OrderBookIndex {
+  constructor(init: OrderBookIndex) {
+    Object.assign(this, init);
+  }
+
+  /**
+   * The ID of the order this row belongs to.
+   */
+  @_CausaRuntimeGoogleSpannerColumn()
+  @_ClassValidatorIsUuid(undefined)
+  readonly id!: string;
+
+  /**
+   * The ID of one book contained in the order.
+   */
+  @_CausaRuntimeGoogleSpannerColumn()
+  @_ClassValidatorIsUuid(undefined)
+  readonly book!: string;
+
+  /**
+   * The creation date of the order, copied so the index can sort by it.
+   */
+  @_CausaRuntimeGoogleSpannerColumn()
+  @_ClassTransformerType(() => Date)
+  @_ClassValidatorIsDate()
+  readonly createdAt!: Date;
+}
+
+/**
  * A confirmed order.
  */
 export type OrderConfirmed = Order & OrderConfirmedConstraint;
