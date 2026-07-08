@@ -53,6 +53,19 @@ export class OrderAuthorizationService {
   }
 
   /**
+   * Authorizes listing every order that contains a given book: staff only.
+   *
+   * @param actor The authenticated caller.
+   */
+  validateCanListByBook(actor: User): void {
+    if (this.isStaff(actor)) {
+      return;
+    }
+
+    throw new ForbiddenError();
+  }
+
+  /**
    * Whether the caller carries the `staff` role. Roles arrive as a token claim,
    * and `User` is `{ id, [claim]: any }`, so the array shape is checked
    * defensively before looking for the role.

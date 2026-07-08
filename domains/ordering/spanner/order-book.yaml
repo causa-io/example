@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# Companion "index" table that makes the books *inside* an order queryable.
+#
+# An `Order` stores its books in the `lines` JSON array
+# (see ../entities/order.yaml). Spanner cannot efficiently seek into that array:
+# "find every order containing book X" would have to scan every row and unpack
+# the JSON: complexity is O(rows), and unindexable. This is the "array indexing
+# via custom projection" pattern: promote the array elements out into their own
+# table, one row per (order, book), so a plain secondary index can serve the
+# lookup.
+#
+# Like `book-projection.yaml`, this schema lives under `spanner/` (not
+# `entities/`): `OrderBook` is not a domain entity, it is an internal index the
+# `ordering` service maintains for its own reads, derived from `Order`.
+#
+# Two things about this table cannot be expressed in the schema and are declared
+# only in the hand-written DDL (0005-create-order-book-index.sql):
+#   - It is INTERLEAVED IN PARENT `Order` ON DELETE CASCADE. That is crucial:
+#     the `OrderManager` keeps the rows in sync by letting the parent's replace
+#     cascade-delete the old rows, then re-inserting the current set (see the
+#     manager's `updateState`).
+#   - The secondary index `OrderBooksByBook` on `(book, createdAt DESC, id)`,
+#     which the listing scans.
+
+title: OrderBookIndex
+type: object
+description: >-
+  One row per book contained in an order, materialized so orders can be looked
+  up and paginated by book. Denormalizes the order's `createdAt` so the listing
+  is ordered straight from the index, without touching the `Order` row.
+additionalProperties: false
+causa:
+  googleSpannerTable:
+    # The table is named `OrderBook` (the class stays `OrderBookIndex`, the
+    # `...Index` suffix marking it as a derived index rather than an entity).
+    name: OrderBook
+    # The primary key leads with the parent's key (`id`, the order) so the table
+    # can interleave in `Order`. `book` discriminates the one row per book.
+    primaryKey: [id, book]
+properties:
+  id:
+    type: string
+    format: uuid
+    # This is the *order's* id — the interleaving parent key, not a key of its
+    # own. The listing joins back to `Order` on it to return the order.
+    description: The ID of the order this row belongs to.
+  book:
+    type: string
+    format: uuid
+    description: The ID of one book contained in the order.
+  createdAt:
+    type: string
+    format: date-time
+    # Duplicated from the order so the secondary index can order by it directly.
+    # Kept in sync on every write: the manager rewrites the rows from the order.
+    description: The creation date of the order.
+required:
+  - id
+  - book
+  - createdAt

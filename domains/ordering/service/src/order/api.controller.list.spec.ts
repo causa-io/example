@@ -17,12 +17,13 @@ import { AppFixture } from '@causa/runtime/nestjs/testing';
 import { randomUUID } from 'crypto';
 import 'jest-extended';
 import { ApiModule } from '../api.module.js';
-import { Order, OrderEvent } from '../model/generated.js';
+import { Order, OrderBookIndex, OrderEvent } from '../model/generated.js';
 import {
   makeOrder,
   makeOrderLine,
   makeOrderPending,
 } from '../model/make.test.js';
+import { insertOrders } from './utils.test.js';
 
 describe('OrderApiController', () => {
   let fixture: AppFixture;
@@ -36,7 +37,7 @@ describe('OrderApiController', () => {
     fixture = new AppFixture(ApiModule, {
       fixtures: createGoogleFixtures({
         pubSubTopics: { 'ordering.order.v1': OrderEvent },
-        spannerTypes: [Order],
+        spannerTypes: [Order, OrderBookIndex],
       }),
     });
 
@@ -239,6 +240,77 @@ describe('OrderApiController', () => {
       // The customer's remaining order — not the staff's own.
       expect(second.body.items.map((o: { id: string }) => o.id)).toEqual([
         older.id,
+      ]);
+    });
+  });
+
+  // The "array indexing via custom projection" pattern: `?book=` lists every
+  // order containing a book, served by the companion `OrderBook` index rather
+  // than by scanning the `lines` JSON. Staff only, across all customers.
+  describe('GET /orders?book=', () => {
+    it('should forbid a non-staff caller from listing by book', async () => {
+      await fixture.request
+        .get('/orders')
+        .query({ book: randomUUID() })
+        .auth(customerToken, { type: 'bearer' })
+        .expect(403)
+        .expect(({ body }) =>
+          expect(body).toMatchObject({
+            statusCode: 403,
+            errorCode: 'forbidden',
+          }),
+        );
+    });
+
+    it('should let staff page through every order containing a book, across customers, most recent first', async () => {
+      const book = randomUUID();
+      const mine = makeOrderPending({
+        customer,
+        createdAt: new Date('2026-03-01'),
+        lines: [makeOrderLine({ book, quantity: 1 })],
+      });
+      const theirs = makeOrderPending({
+        createdAt: new Date('2026-03-02'),
+        lines: [
+          makeOrderLine({ book, quantity: 1 }),
+          makeOrderLine({ quantity: 1 }),
+        ],
+      });
+      const unrelated = makeOrderPending({
+        customer,
+        createdAt: new Date('2026-03-03'),
+        lines: [makeOrderLine({ quantity: 1 })],
+      });
+      const deleted = makeOrder({
+        createdAt: new Date('2026-03-04'),
+        deletedAt: new Date('2026-03-04'),
+        lines: [makeOrderLine({ book, quantity: 1 })],
+      });
+      await insertOrders(fixture, [mine, theirs, unrelated, deleted]);
+
+      // First page of one, newest match first (the other customer's order).
+      const first = await fixture.request
+        .get('/orders')
+        .query({ book, limit: 1 })
+        .auth(staffToken, { type: 'bearer' })
+        .expect(200);
+      expect(first.body.items.map((o: { id: string }) => o.id)).toEqual([
+        theirs.id,
+      ]);
+      // The cursor keeps the book filter, so the next page stays scoped to it.
+      expect(first.body.nextPageQuery).toContain(`book=${book}`);
+      // Items are the public DTO — no internal columns.
+      expect(first.body.items[0]).not.toHaveProperty('deletedAt');
+      expect(first.body.items[0]).not.toHaveProperty('externalReference');
+
+      // Following the cursor yields the remaining match — still filtered to the
+      // book, so the wrong-book order never appears.
+      const second = await fixture.request
+        .get(`/orders${first.body.nextPageQuery}`)
+        .auth(staffToken, { type: 'bearer' })
+        .expect(200);
+      expect(second.body.items.map((o: { id: string }) => o.id)).toEqual([
+        mine.id,
       ]);
     });
   });

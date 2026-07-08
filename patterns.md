@@ -28,3 +28,4 @@ The patterns this example repository demonstrates, each with a dedicated page.
 | [Authorization service](patterns/authorization-service.md) | 📘 TypeScript | 🪨 Stable | Centralize authorization decisions in one injectable reused by controllers and state-change validation. |
 | [Validator service](patterns/validator-service.md) | 📘 TypeScript | 🪨 Stable | Split command data sanitization and validation logic into its own service. |
 | [Pagination](patterns/pagination.md) | 📘 TypeScript | 💡 Recommended | Implement a list endpoint: keyset (token) pagination in a `QueryService`, using the runtime `PageQuery` / `Page` / opaque cursor. |
+| [Array indexing via custom projection](patterns/array-indexing-via-custom-projection.md) | 🏷️ Architecture | 🪨 Stable | Filter or list by a value inside an array column: materialize a companion interleaved table and index that. |
