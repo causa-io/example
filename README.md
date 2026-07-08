@@ -23,3 +23,4 @@ A small, heavily commented backend that demonstrates good practice when building
 - The business model is incomplete. The point is to define just enough to demonstrate the patterns.
 - Even within the defined model, the implementation is not complete. The [ordering service](domains/ordering/service) is guaranteed to build and pass tests. The [catalog domain](domains/catalog) is modelled but not implemented.
 - Only the architecture documented within a pattern should be used as reference. Some parts of the modelling may only serve a specific demonstration purpose and should not be considered as a guideline for architecture (for example, they may disregard eventual consistency constraints, expose an inconvenient API, etc).
+- Most comments are written to explain the patterns and the reasoning. When applying the patterns to your own codebase, you may not need to repeat the same comments. Focus on your own business logic and non-obvious technical aspects.
