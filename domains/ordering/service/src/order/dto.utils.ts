@@ -4,8 +4,14 @@
 //   - internal service errors → public error DTOs, declared as `@TryMap` cases;
 //   - the stored `Order` entity → the public `OrderPublicDto` returned by the API.
 
-import { NotFoundErrorDto, toDto, toDtoType } from '@causa/runtime/nestjs';
+import {
+  ForbiddenErrorDto,
+  NotFoundErrorDto,
+  toDto,
+  toDtoType,
+} from '@causa/runtime/nestjs';
 import { BookNotFoundError, BookUnavailableError } from '../catalog/errors.js';
+import { ForbiddenError } from '../errors.js';
 import {
   BookNotFoundErrorDto,
   BookUnavailableErrorDto,
@@ -23,6 +29,12 @@ export const orderNotFoundErrorAsDto = toDtoType(
   OrderNotFoundError,
   NotFoundErrorDto,
 );
+
+/**
+ * Maps the service-wide {@link ForbiddenError} to the shared `403 forbidden`
+ * DTO.
+ */
+export const forbiddenErrorAsDto = toDtoType(ForbiddenError, ForbiddenErrorDto);
 
 /**
  * Maps {@link BookNotFoundError} to the domain-specific `ordering.bookNotFound`
