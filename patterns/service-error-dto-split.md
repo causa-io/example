@@ -71,8 +71,8 @@ export class BookNotFoundErrorDto {
 
 Per-entity `dto.utils.ts` declares one mapper per error, using two combinators from `@causa/runtime/nestjs`:
 
-- **`toDtoType(Error, Dto)`** — instantiate the DTO with no arguments. Use it when the DTO carries nothing beyond status/code/message, i.e. when reusing a shared runtime DTO.
-- **`toDto(Error, e => new Dto({...}))`** — build the DTO from the error instance, copying payload fields across. Use it for domain DTOs with extra data.
+- **`toDtoType(Error, Dto)`** — instantiate the DTO with no arguments. Valid **only for the shared runtime DTOs**, which hardcode their own `statusCode`/`errorCode` as runtime defaults, so a no-argument instance is already a complete body.
+- **`toDto(Error, e => new Dto({...}))`** — construct the DTO explicitly, setting `statusCode`/`errorCode`/`message` (plus any payload the error carries). Use it for **every generated domain DTO**, whether or not it adds data beyond the three standard fields.
 
 ```typescript
 // order/dto.utils.ts
@@ -114,7 +114,7 @@ The OpenAPI spec ties it together on the documentation side: each operation's `r
 - **Where the same error maps is a boundary decision, not a property of the error.** One typed error can map to different DTOs at different endpoints (a plain 404 in one controller, a rich 400-with-payload in another). The mapper file records that choice per entity.
 - **Two kinds of validation, two paths.** Request *shape* (types, formats, required fields) is enforced by NestJS's `ValidationPipe` from the generated DTO decorators and surfaces automatically as a `400 invalidInput` — you (almost) never throw it. *State* validation (existence, availability, business invariants) is what the typed errors here are for; see the [Validator service](validator-service.md).
 - **`409` is reserved for optimistic-concurrency only.** A business-state conflict (acting on an order in the wrong status) is a `400` with a domain `errorCode`, not a `409` — a stale `updatedAt` is the only thing that yields `409` (the runtime's `IncorrectVersionErrorDto`). See [invalid-order-status-error.dto.yaml](../domains/ordering/api/dtos/invalid-order-status-error.dto.yaml).
-- **`toDto` restates values already pinned in the schema.** The `statusCode`/`errorCode` literals in the mapper duplicate the schema `const`s. `toDtoType` avoids the duplication but only works when there is no payload to copy.
+- **`toDtoType` is for the shared runtime DTOs only — never a generated domain DTO, even a payload-free one.** A generated domain DTO declares `statusCode`/`errorCode` as `@Equals` *validators*, not runtime defaults, so a no-argument instance (`toDtoType`) leaves `statusCode` `undefined` and the response silently loses its status (it surfaces as a `200`, not the intended code). Domain DTOs must go through `toDto`, restating the values pinned as `const` in the schema — which is why `invalidOrderStatusErrorAsDto`, though it carries no extra payload, still uses `toDto`. The shared runtime DTOs escape this only because they hardcode their own status, which is also what lets `toDto` restate values that then merely duplicate the schema `const`s.
 
 ## In this repository
 
