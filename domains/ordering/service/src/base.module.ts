@@ -6,6 +6,7 @@
 
 import {
   FirebaseModule,
+  FirestorePubSubTransactionModule,
   PubSubPublisherModule,
   SpannerModule,
   SpannerOutboxTransactionModule,
@@ -35,6 +36,12 @@ import { HealthModule } from './health.js';
       index: 'OutboxEventsByShardAndLeaseExpiration',
       sharding: { column: 'shard', count: 10 },
     }),
+
+    // Provides the `FirestorePubSubTransactionRunner`: the Firestore
+    // counterpart of the Spanner outbox runner, used by the order Firestore
+    // projection to write `OrderDocument`s. It relies on `FirebaseModule` (the
+    // Firestore client) and `PubSubPublisherModule`, both declared above.
+    FirestorePubSubTransactionModule.forRoot(),
 
     HealthModule,
   ],
