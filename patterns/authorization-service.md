@@ -42,7 +42,7 @@ export class OrderAuthorizationService {
 
 ### Reused by the write path
 
-The same service is the policy behind the manager's `validationFn` hook for state-dependent writes: the controller passes `validationFn: (order, transaction) => authorizationService.validateCanX(actor, order, { transaction })`, closing over the authenticated `actor`, so a transition is authorized against the **stored** order inside the transaction before it can commit. See the [Controller / Service / Manager split](service-layering.md) for how that hook fits the layering.
+The same service is the policy behind the manager's `validationFn` hook for state-dependent writes: the controller passes `validationFn: (order) => authorizationService.validateCanCancel(actor, order)`, closing over the authenticated `actor`, so a transition is authorized against the **stored** order inside the transaction before it can commit. That hook — and how the service composes it with a state-machine precondition — is the subject of [Controller authorization via `validationFn`](controller-authorization-via-validationfn.md); see the [Controller / Service / Manager split](service-layering.md) for how it fits the layering.
 
 ## In this repository
 

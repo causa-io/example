@@ -117,7 +117,7 @@ Two translation concerns live in `dto.utils.ts`, keeping the layers below HTTP-a
 
 Authorization is decided at the controller boundary, *before* any work, and always through the [Authorization service](authorization-service.md) so the policy is defined once. On a read, the controller fetches, then calls `authorizationService.validateCanRead(actor, order)` (the `get` handler above); `place` needs no check because the customer is forced to the authenticated caller, never taken from the body.
 
-Writes whose permission depends on the *stored* state (state transitions) are authorized differently — through the manager/service's `validationFn` hook, which runs against the current entity inside the transaction and throws before the mutation commits.
+Writes whose permission depends on the *stored* state (state transitions) are authorized differently — through the manager/service's `validationFn` hook, which runs against the current entity inside the transaction and throws before the mutation commits. See [Controller authorization via `validationFn`](controller-authorization-via-validationfn.md).
 
 ## In this repository
 
