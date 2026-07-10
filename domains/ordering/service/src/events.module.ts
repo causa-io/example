@@ -10,9 +10,10 @@ import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { BaseModule } from './base.module.js';
 import { CatalogEventModule } from './catalog/event.module.js';
+import { OrderEventModule } from './order/event.module.js';
 
 @Module({
-  imports: [BaseModule, CatalogEventModule],
+  imports: [BaseModule, CatalogEventModule, OrderEventModule],
   providers: [
     {
       // The interceptor that turns an incoming Pub/Sub push into the typed

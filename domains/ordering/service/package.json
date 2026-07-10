@@ -27,6 +27,7 @@
     "class-validator": "^0.15.1"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@nestjs/testing": "^11.1.27",
     "@swc/core": "^1.15.43",
     "@swc/jest": "^0.2.39",
@@ -38,6 +39,7 @@
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
+    "firebase": "^12.15.0",
     "jest": "^30.4.2",
     "jest-extended": "^7.0.0",
     "rimraf": "^6.1.3",
