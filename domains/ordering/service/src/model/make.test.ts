@@ -18,6 +18,8 @@ import {
   type BookDeletedEvent,
   type BookNotDeleted,
   type BookUpdatedEvent,
+  type OrderCancelled,
+  type OrderCancelledEvent,
   type OrderConfirmed,
   type OrderConfirmedEvent,
   type OrderDeleted,
@@ -160,6 +162,34 @@ export function makeOrderBookIndex(
     id: _CryptoRandomUuid(),
     ...data,
   });
+}
+
+export function makeOrderCancelled(
+  data: Partial<OrderCancelled> = {},
+): OrderCancelled {
+  return new Order({
+    deletedAt: null,
+    externalReference: null,
+    status: OrderStatus.Cancelled,
+    createdAt: new Date(),
+    customer: _CryptoRandomUuid(),
+    id: _CryptoRandomUuid(),
+    lines: [],
+    updatedAt: new Date(),
+    ...data,
+  }) as OrderCancelled;
+}
+
+export function makeOrderCancelledEvent(
+  data: Partial<OrderCancelledEvent> = {},
+): OrderCancelledEvent {
+  return new OrderEvent({
+    data: makeOrderCancelled(),
+    name: 'orderCancelled',
+    id: _CryptoRandomUuid(),
+    producedAt: new Date(),
+    ...data,
+  }) as OrderCancelledEvent;
 }
 
 export function makeOrderConfirmed(

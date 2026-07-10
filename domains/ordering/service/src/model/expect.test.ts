@@ -21,6 +21,7 @@ import {
   OrderEvent,
   OrderLine,
   OrderStatus,
+  type OrderCancelled,
   type OrderConfirmed,
   type OrderDeleted,
   type OrderFailed,
@@ -51,6 +52,7 @@ export async function expectOrder(
       OrderStatus.Processing,
       OrderStatus.Confirmed,
       OrderStatus.Failed,
+      OrderStatus.Cancelled,
     ]),
     updatedAt: expect.any(Date),
     ...expected,
@@ -67,6 +69,30 @@ export async function expectOrderNotToExist(
 ): Promise<void> {
   const actual = await runner.run({ readOnly: true }, (t) => t.get(Order, key));
   expect(actual).toEqual(null);
+}
+
+export async function expectOrderCancelled(
+  runner: _CausaRuntimeTransactionRunner<
+    _CausaRuntimeTransaction,
+    _CausaRuntimeReadOnlyStateTransaction
+  >,
+  expected: Partial<OrderCancelled>,
+): Promise<OrderCancelled> {
+  const actual = await runner.run({ readOnly: true }, (t) =>
+    t.get(Order, expected),
+  );
+  expect(actual).toEqual({
+    deletedAt: null,
+    externalReference: null,
+    status: OrderStatus.Cancelled,
+    createdAt: expect.any(Date),
+    customer: expect.any(String),
+    id: expect.any(String),
+    lines: expect.any(Array),
+    updatedAt: expect.any(Date),
+    ...expected,
+  });
+  return actual as OrderCancelled;
 }
 
 export async function expectOrderConfirmed(
@@ -115,6 +141,7 @@ export async function expectOrderDeleted(
       OrderStatus.Processing,
       OrderStatus.Confirmed,
       OrderStatus.Failed,
+      OrderStatus.Cancelled,
     ]),
     updatedAt: expect.any(Date),
     ...expected,
@@ -199,6 +226,7 @@ export async function expectOrderNotDeleted(
       OrderStatus.Processing,
       OrderStatus.Confirmed,
       OrderStatus.Failed,
+      OrderStatus.Cancelled,
     ]),
     updatedAt: expect.any(Date),
     ...expected,
@@ -285,6 +313,40 @@ export async function expectOrderNotMutated(
         ? 'ordering.order.v1'
         : undefined,
     });
+}
+
+export async function expectOrderCancelledEvent(
+  fixture: _CausaRuntimeAppFixture,
+  before: Partial<Order>,
+  updates: Partial<OrderCancelled> = {},
+  tests: {
+    matchesHttpResponse?: object;
+    eventAttributes?: _CausaRuntimeEventAttributes;
+  } = {},
+): Promise<Order> {
+  return await fixture.get(_CausaRuntimeVersionedEntityFixture).expectMutated(
+    { type: Order, entity: before },
+    {
+      expectedEntity: {
+        deletedAt: null,
+        externalReference: null,
+        createdAt: expect.any(Date),
+        customer: expect.any(String),
+        id: expect.any(String),
+        lines: expect.any(Array),
+        ...before,
+        status: OrderStatus.Cancelled,
+        updatedAt: expect.any(Date),
+        ...updates,
+      },
+      expectedEvent: {
+        topic: 'ordering.order.v1',
+        name: expect.toBeOneOf(['orderCancelled']),
+        attributes: tests.eventAttributes,
+      },
+      matchesHttpResponse: tests.matchesHttpResponse,
+    },
+  );
 }
 
 export async function expectOrderConfirmedEvent(
@@ -443,6 +505,7 @@ export async function expectOrderDocument(
       OrderStatus.Processing,
       OrderStatus.Confirmed,
       OrderStatus.Failed,
+      OrderStatus.Cancelled,
     ]),
     updatedAt: expect.any(Date),
     ...expected,
