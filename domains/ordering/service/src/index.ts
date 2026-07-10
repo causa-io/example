@@ -17,7 +17,10 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ApiModule } from './api.module.js';
 import { EventsModule } from './events.module.js';
 
-// Emit structured logs in the format Google Cloud Logging understands.
+// Emit structured logs in the format Google Cloud Logging understands: map Pino
+// levels to Cloud Logging `severity`, tag errors for Error Reporting, and
+// redact sensitive headers.
+// Applied process-wide, before the app (and its logger) boot.
 updatePinoConfiguration(googlePinoConfiguration);
 
 const PORT = process.env.PORT ?? 8080;

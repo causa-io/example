@@ -39,6 +39,10 @@ export class CatalogEventController implements CatalogEventsContract {
   }
 
   async handleBookForProjection(event: BookEvent): Promise<void> {
+    // Enrich the event-scoped logger with the domain fields. The Causa
+    // runtime's Pub/Sub interceptor has already assigned `eventId` (and
+    // `pubSubMessageId`) to this logger, so every line handling this delivery
+    // is correlated by the event. We add the book id and event name on top.
     this.logger.assign({ bookId: event.data.id, eventName: event.name });
 
     // `processOrSkipEvent` upserts the projection, or returns `null` (a no-op)
