@@ -11,9 +11,10 @@
 import { TryMap, type User } from '@causa/runtime';
 import { SpannerOutboxTransactionRunner } from '@causa/runtime-google';
 import { AuthUser, Logger, Page } from '@causa/runtime/nestjs';
-import { NotImplementedException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
+  OrderCancelPathParams,
+  OrderCancelQueryParams,
   OrderGetPathParams,
   OrderListQueryParams,
   OrderProcessPathParams,
@@ -34,6 +35,8 @@ import {
   bookNotFoundErrorAsDto,
   bookUnavailableErrorAsDto,
   forbiddenErrorAsDto,
+  incorrectVersionErrorAsDto,
+  invalidOrderStatusErrorAsDto,
   orderNotFoundErrorAsDto,
   toOrderPublicDto,
 } from './dto.utils.js';
@@ -165,12 +168,60 @@ export class OrderApiController implements OrderApiContract {
     return this.queryService.listByCustomer(target, query);
   }
 
+  @TryMap(
+    forbiddenErrorAsDto,
+    invalidOrderStatusErrorAsDto,
+    orderNotFoundErrorAsDto,
+    incorrectVersionErrorAsDto,
+  )
   async process(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _params: OrderProcessPathParams,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _query: OrderProcessQueryParams,
+    { id }: OrderProcessPathParams,
+    { updatedAt }: OrderProcessQueryParams,
+    @AuthUser() actor: User,
   ): Promise<OrderPublicDto> {
-    throw new NotImplementedException();
+    this.logger.assign({ orderId: id });
+
+    // Authorization is decided against the stored order.
+    // Like `cancel`, the check is injected as the manager's `validationFn`.
+    const order = await this.runner.run(
+      { tag: 'orderProcess' },
+      (transaction) =>
+        this.service.process(id, {
+          transaction,
+          checkUpdatedAt: updatedAt,
+          validationFn: async (order) =>
+            this.authorizationService.validateCanProcess(actor, order),
+        }),
+    );
+    return toOrderPublicDto(order);
+  }
+
+  @TryMap(
+    invalidOrderStatusErrorAsDto,
+    orderNotFoundErrorAsDto,
+    incorrectVersionErrorAsDto,
+  )
+  async cancel(
+    { id }: OrderCancelPathParams,
+    { updatedAt }: OrderCancelQueryParams,
+    @AuthUser() actor: User,
+  ): Promise<OrderPublicDto> {
+    this.logger.assign({ orderId: id });
+
+    // Cancelling is allowed to the order's own customer or to staff, a decision
+    // that depends on the *stored* order, not just the caller. So the check is
+    // handed down as a `validationFn`: it runs against the order fetched inside
+    // the write transaction, closing over the authenticated `actor`, and throws
+    // (a `404`, hiding the order from a non-owner) before the mutation commits.
+    // The service composes it ahead of its own `pending`-state check.
+    const order = await this.runner.run({ tag: 'orderCancel' }, (transaction) =>
+      this.service.cancel(id, {
+        transaction,
+        checkUpdatedAt: updatedAt,
+        validationFn: async (order) =>
+          this.authorizationService.validateCanCancel(actor, order),
+      }),
+    );
+    return toOrderPublicDto(order);
   }
 }
