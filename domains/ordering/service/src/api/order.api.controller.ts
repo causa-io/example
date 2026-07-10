@@ -16,6 +16,8 @@ import {
   type OrderPublicDto,
 } from '../model/generated.js';
 import {
+  OrderCancelPathParams,
+  OrderCancelQueryParams,
   OrderGetPathParams,
   OrderListQueryParams,
   OrderProcessPathParams,
@@ -68,6 +70,23 @@ export interface OrderApiContract {
   process(
     params: OrderProcessPathParams,
     query: OrderProcessQueryParams,
+    ...rest: any[]
+  ): Promise<OrderPublicDto>;
+
+  /**
+   * Cancels a pending order, moving it to `cancelled`.
+   * Cancellation is terminal: a cancelled order is never processed.
+   *
+   * Accessible to the order's own customer and to staff.
+   * Only a `pending` order can be cancelled.
+   *
+   * @param params The path parameters.
+   * @param query The query parameters.
+   * @returns The order was cancelled.
+   */
+  cancel(
+    params: OrderCancelPathParams,
+    query: OrderCancelQueryParams,
     ...rest: any[]
   ): Promise<OrderPublicDto>;
 }
@@ -179,5 +198,32 @@ export function AsOrderApiController() {
     );
     _NestjsCommonParam()(constructor.prototype, 'process', 0);
     _NestjsCommonQuery()(constructor.prototype, 'process', 1);
+
+    if (
+      !Reflect.hasOwnMetadata(
+        'design:paramtypes',
+        constructor.prototype,
+        'cancel',
+      )
+    ) {
+      Reflect.defineMetadata(
+        'design:paramtypes',
+        [OrderCancelPathParams, OrderCancelQueryParams],
+        constructor.prototype,
+        'cancel',
+      );
+    }
+    _NestjsCommonPost(':id/cancel')(
+      constructor.prototype,
+      'cancel',
+      Object.getOwnPropertyDescriptor(constructor.prototype, 'cancel')!,
+    );
+    _NestjsCommonHttpCode(_NestjsCommonHttpStatus.OK)(
+      constructor.prototype,
+      'cancel',
+      Object.getOwnPropertyDescriptor(constructor.prototype, 'cancel')!,
+    );
+    _NestjsCommonParam()(constructor.prototype, 'cancel', 0);
+    _NestjsCommonQuery()(constructor.prototype, 'cancel', 1);
   };
 }

@@ -4,8 +4,10 @@
 //   - internal service errors → public error DTOs, declared as `@TryMap` cases;
 //   - the stored `Order` entity → the public `OrderPublicDto` returned by the API.
 
+import { IncorrectEntityVersionError } from '@causa/runtime';
 import {
   ForbiddenErrorDto,
+  IncorrectVersionErrorDto,
   NotFoundErrorDto,
   toDto,
   toDtoType,
@@ -15,10 +17,11 @@ import { ForbiddenError } from '../errors.js';
 import {
   BookNotFoundErrorDto,
   BookUnavailableErrorDto,
+  InvalidOrderStatusErrorDto,
   Order,
   OrderPublicDto,
 } from '../model/generated.js';
-import { OrderNotFoundError } from './errors.js';
+import { InvalidOrderStatusError, OrderNotFoundError } from './errors.js';
 
 /**
  * Maps {@link OrderNotFoundError} to the shared `404 notFound` DTO.
@@ -35,6 +38,39 @@ export const orderNotFoundErrorAsDto = toDtoType(
  * DTO.
  */
 export const forbiddenErrorAsDto = toDtoType(ForbiddenError, ForbiddenErrorDto);
+
+/**
+ * Maps {@link InvalidOrderStatusError} to the domain `400
+ * ordering.invalidOrderStatus` DTO.
+ *
+ * `toDto` (not `toDtoType`) is required even though there is no extra payload:
+ * `InvalidOrderStatusErrorDto` is a plain generated class whose `statusCode` /
+ * `errorCode` are only validated (`@Equals`) fields, not runtime defaults.
+ * Instantiating it with no arguments (`toDtoType`) would leave `statusCode`
+ * `undefined`, so the response would not get a `400`.
+ * The shared runtime DTOs (see {@link incorrectVersionErrorAsDto}) hardcode
+ * their own status, which is the only case `toDtoType` covers.
+ */
+export const invalidOrderStatusErrorAsDto = toDto(
+  InvalidOrderStatusError,
+  ({ status }) =>
+    new InvalidOrderStatusErrorDto({
+      statusCode: 400,
+      errorCode: 'ordering.invalidOrderStatus',
+      message: `The order cannot be changed from its '${status}' status.`,
+    }),
+);
+
+/**
+ * Maps the runtime's {@link IncorrectEntityVersionError} — thrown by
+ * `VersionedEntityManager.update` when the client's `checkUpdatedAt` does not
+ * match the stored `updatedAt` — to the shared `409 incorrectVersion` DTO.
+ * See the optimistic-concurrency-control pattern.
+ */
+export const incorrectVersionErrorAsDto = toDtoType(
+  IncorrectEntityVersionError,
+  IncorrectVersionErrorDto,
+);
 
 /**
  * Maps {@link BookNotFoundError} to the domain-specific `ordering.bookNotFound`

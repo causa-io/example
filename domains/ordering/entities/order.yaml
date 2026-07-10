@@ -3,8 +3,9 @@
 # This is the central entity of the only implemented service in the example.
 # It demonstrates:
 #   - A nested array of value objects (`lines`).
-#   - A status field driving a small state machine
-#     (pending → processing → confirmed / failed).
+#   - A status field driving a small state machine:
+#       pending → processing → confirmed / failed  (third-party synchronization)
+#       pending → cancelled                        (customer/staff cancellation)
 
 title: Order
 type: object
@@ -94,6 +95,7 @@ $defs:
       - processing
       - confirmed
       - failed
+      - cancelled
     description: The status of an order.
 
   # See domains/catalog/entities/book.yaml for an explanation of constraints.
@@ -197,6 +199,25 @@ $defs:
     properties:
       status:
         const: failed
+      deletedAt:
+        type: "null"
+      externalReference:
+        type: "null"
+    required:
+      - status
+      - deletedAt
+      - externalReference
+
+  OrderCancelledConstraint:
+    title: OrderCancelledConstraint
+    type: object
+    description: An order cancelled by its customer (or by staff) while pending.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+    properties:
+      status:
+        const: cancelled
       deletedAt:
         type: "null"
       externalReference:

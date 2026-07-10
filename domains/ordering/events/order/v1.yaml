@@ -49,6 +49,7 @@ $defs:
       - orderProcessing
       - orderConfirmed
       - orderFailed
+      - orderCancelled
     description: The name of an order event.
 
   # See domains/catalog/events/book/v1.yaml for an explanation of constraints on
@@ -143,6 +144,28 @@ $defs:
       data:
         oneOf:
           - $ref: ../../entities/order.yaml#/$defs/OrderFailedConstraint
+    required:
+      - name
+      - data
+
+  OrderCancelledEventConstraint:
+    title: OrderCancelledEventConstraint
+    type: object
+    description: An event indicating that a pending order was cancelled.
+    additionalProperties: false
+    causa:
+      constraintFor: "#"
+      entityMutationFrom:
+        - ../../entities/order.yaml#/$defs/OrderPendingConstraint
+      entityPropertyChanges:
+        - updatedAt
+        - status
+    properties:
+      name:
+        const: orderCancelled
+      data:
+        oneOf:
+          - $ref: ../../entities/order.yaml#/$defs/OrderCancelledConstraint
     required:
       - name
       - data

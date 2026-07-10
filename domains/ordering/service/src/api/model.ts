@@ -10,6 +10,37 @@ import {
 } from 'class-validator';
 
 /**
+ * The path parameters for the `orderCancel` operation.
+ */
+export class OrderCancelPathParams {
+  constructor(init: OrderCancelPathParams) {
+    Object.assign(this, init);
+  }
+
+  /**
+   * The ID of the order to cancel.
+   */
+  @_ClassValidatorIsUuid(undefined)
+  readonly id!: string;
+}
+
+/**
+ * The query parameters for the `orderCancel` operation.
+ */
+export class OrderCancelQueryParams {
+  constructor(init: OrderCancelQueryParams) {
+    Object.assign(this, init);
+  }
+
+  /**
+   * The version of the order the client is cancelling.
+   */
+  @_ClassTransformerType(() => Date)
+  @_ClassValidatorIsDate()
+  readonly updatedAt!: Date;
+}
+
+/**
  * The path parameters for the `orderGet` operation.
  */
 export class OrderGetPathParams {

@@ -476,12 +476,58 @@ export class OrderBookIndex {
   readonly book!: string;
 
   /**
-   * The creation date of the order, copied so the index can sort by it.
+   * The creation date of the order.
    */
   @_CausaRuntimeGoogleSpannerColumn()
   @_ClassTransformerType(() => Date)
   @_ClassValidatorIsDate()
   readonly createdAt!: Date;
+}
+
+/**
+ * An order cancelled by its customer (or by staff) while pending.
+ */
+export type OrderCancelled = Order & OrderCancelledConstraint;
+
+/**
+ * An order cancelled by its customer (or by staff) while pending.
+ */
+export class OrderCancelledConstraint {
+  constructor(init: OrderCancelledConstraint) {
+    Object.assign(this, init);
+  }
+
+  @_ClassValidatorEquals('cancelled')
+  readonly status!: OrderStatus.Cancelled;
+
+  @_ClassValidatorEquals(null)
+  readonly deletedAt!: null;
+
+  @_ClassValidatorEquals(null)
+  readonly externalReference!: null;
+}
+
+/**
+ * An event indicating that a pending order was cancelled.
+ */
+export type OrderCancelledEvent = OrderEvent & OrderCancelledEventConstraint;
+
+/**
+ * An event indicating that a pending order was cancelled.
+ */
+export class OrderCancelledEventConstraint {
+  constructor(init: OrderCancelledEventConstraint) {
+    Object.assign(this, init);
+  }
+
+  @_ClassValidatorEquals('orderCancelled')
+  readonly name!: 'orderCancelled';
+
+  @_ClassTransformerType(() => OrderCancelledConstraint)
+  @_ClassValidatorIsDefined()
+  @_ClassValidatorIsObject()
+  @_ClassValidatorValidateNested()
+  readonly data!: OrderCancelledConstraint;
 }
 
 /**
@@ -597,6 +643,7 @@ export enum OrderEventName {
   OrderProcessing = 'orderProcessing',
   OrderConfirmed = 'orderConfirmed',
   OrderFailed = 'orderFailed',
+  OrderCancelled = 'orderCancelled',
 }
 
 /**
@@ -783,6 +830,7 @@ export enum OrderStatus {
   Processing = 'processing',
   Confirmed = 'confirmed',
   Failed = 'failed',
+  Cancelled = 'cancelled',
 }
 
 /**
@@ -837,7 +885,13 @@ export class Order {
    * The current status of the order.
    */
   @_CausaRuntimeGoogleSpannerColumn()
-  @_ClassValidatorIsIn(['pending', 'processing', 'confirmed', 'failed'])
+  @_ClassValidatorIsIn([
+    'pending',
+    'processing',
+    'confirmed',
+    'failed',
+    'cancelled',
+  ])
   readonly status!: OrderStatus;
 
   /**
@@ -907,7 +961,13 @@ export class OrderDocument {
   /**
    * The current status of the order.
    */
-  @_ClassValidatorIsIn(['pending', 'processing', 'confirmed', 'failed'])
+  @_ClassValidatorIsIn([
+    'pending',
+    'processing',
+    'confirmed',
+    'failed',
+    'cancelled',
+  ])
   readonly status!: OrderStatus;
 
   /**
@@ -995,7 +1055,13 @@ export class OrderPublicDto {
   /**
    * The current status of the order.
    */
-  @_ClassValidatorIsIn(['pending', 'processing', 'confirmed', 'failed'])
+  @_ClassValidatorIsIn([
+    'pending',
+    'processing',
+    'confirmed',
+    'failed',
+    'cancelled',
+  ])
   readonly status!: OrderStatus;
 
   /**

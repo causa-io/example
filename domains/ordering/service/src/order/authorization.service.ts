@@ -66,6 +66,46 @@ export class OrderAuthorizationService {
   }
 
   /**
+   * Authorizes starting to process an order.
+   *
+   * Two layers, applied in order — *access* before *action*:
+   * 1. The caller must be able to see the order at all
+   *    ({@link OrderAuthorizationService.validateCanRead}: its customer or
+   *    staff), else `404` — the API never reveals that someone else's order
+   *    exists.
+   * 2. Only then is the action gated: processing is staff-only, so an owner who
+   *    *can* see their order but is not staff is refused with `403`.
+   *
+   * @param actor The authenticated caller.
+   * @param order The stored order being processed (only `customer` is needed).
+   */
+  validateCanProcess(actor: User, order: Pick<Order, 'customer'>): void {
+    this.validateCanRead(actor, order);
+
+    if (this.isStaff(actor)) {
+      return;
+    }
+
+    throw new ForbiddenError();
+  }
+
+  /**
+   * Authorizes cancelling an order.
+   *
+   * Cancelling needs no permission beyond being able to *see* the order — its
+   * own customer, or staff — so the access check is the whole decision, and
+   * this is exactly {@link OrderAuthorizationService.validateCanRead}.
+   * A caller who cannot see the order is therefore answered with `404`, never
+   * `403`: this endpoint has no separate action gate to fail with a `403`.
+   *
+   * @param actor The authenticated caller.
+   * @param order The stored order being cancelled (only `customer` is needed).
+   */
+  validateCanCancel(actor: User, order: Pick<Order, 'customer'>): void {
+    this.validateCanRead(actor, order);
+  }
+
+  /**
    * Whether the caller carries the `staff` role. Roles arrive as a token claim,
    * and `User` is `{ id, [claim]: any }`, so the array shape is checked
    * defensively before looking for the role.

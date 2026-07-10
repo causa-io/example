@@ -117,6 +117,23 @@ await expectOrderPlacedEvent(
 );
 ```
 
+**`before` and `updates` together are the expected post-state.** The helper asserts the stored (and emitted) entity `toEqual`s `{ …matchers, ...before, <the event's status>, updatedAt: <any Date>, ...updates }`. So `before` pins what should stay the same and `updates` names what the mutation changes — anything *neither* pinned nor updated falls back to a loose matcher (`expect.any(...)`) and is **not** actually checked. That makes the two shapes differ:
+
+- **A creation** (`orderPlaced`) has no prior state, so `before` is just the key (`{ id }`) and every created field goes in `updates` — as above.
+- **A transition** (`orderProcessing`, `orderCancelled`) *has* a prior state: pass the **whole prior entity** as `before`, so every property is pinned, and put only the genuine changes in `updates`. For a pure status flip that is `{}` — the helper bakes the new status in itself, so an empty `updates` reads as *"and nothing else changed"*, and a bug that also touched `lines` or `customer` fails.
+
+  The helper can assert the new status without being told because the **event's constraint schema fixes it**: `orderCancelled`'s data satisfies `OrderCancelledConstraint`, whose `status` is `const: cancelled`, and the `typescriptTestExpectation` generator turns that `const` into a precise matcher (`status: OrderStatus.Cancelled`). A field the constraint only *tightens* — rather than fixing to a `const` — yields a **loose** matcher instead, so the test must still pass its exact value: `OrderConfirmedConstraint` constrains `externalReference` to a non-null `string`, so `expectOrderConfirmedEvent` bakes in only `externalReference: expect.any(String)` (it knows the field became non-null, not *which* reference), and a confirmed-order test passes the concrete value in `updates`.
+
+```typescript
+// `before` is the full prior order; `{}` updates ⇒ only status + updatedAt may change.
+// `status` is asserted for us — it is `const: cancelled` in OrderCancelledConstraint.
+await expectOrderCancelledEvent(fixture, order, {}, { matchesHttpResponse: { …body } });
+
+// Contrast a confirmation: `externalReference` is only tightened to non-null in the
+// constraint (loose matcher), so the exact value is passed in `updates`.
+await expectOrderConfirmedEvent(fixture, order, { externalReference: 'ext-ref-123' });
+```
+
 ### One spec per operation
 
 Specs are colocated with the code under test and named for the entrypoint: `api.controller.<operation>.spec.ts` beside the controller (`api.controller.place.spec.ts`, `.get.spec.ts`, `.list.spec.ts`), and `event.controller.<subject>.spec.ts` for event handlers. The outer `describe` is the controller class; a nested `describe` names the route. Splitting per operation keeps each file focused on one request path and its edge cases rather than growing one monolithic suite.
@@ -126,6 +143,8 @@ Specs are colocated with the code under test and named for the entrypoint: `api.
 - **The emulators must already be running.** A spec assumes Spanner / Pub/Sub / Firestore / Auth are up (see the header note in [event.controller.book.spec.ts](../domains/ordering/service/src/catalog/event.controller.book.spec.ts)), it does not start them. In this workspace the Causa CLI owns their lifecycle (`cs emulators start`, then `cs test`). Emulator hosts and the project/instance/database names are supplied as environment variables in [.env](../domains/ordering/service/.env), loaded by `dotenv/config`.
 - **Declare every topic you publish to.** A topic missing from `pubSubTopics` is not captured, so its events can't be asserted (and, depending on wiring, the publish can fail). The map is also how `expect…Event` knows which subscription to read.
 - **Seed through the manager when side effects matter.** `SpannerEntityManager.insert` writes only the row. Anything the manager does on top — an interleaved companion index, a derived column — is skipped, so tests that read via that index must seed through the manager / event path instead.
+- **In a mutation assertion, pin the prior state — don't under-specify `before`.** `before` and `updates` are the expected post-state; whatever neither names is matched loosely and goes unchecked, so a too-thin `before` (e.g. just `{ id }`) silently stops verifying every other column. For a *transition*, pass the **full prior entity** as `before` and only the real changes as `updates` — the assertion then proves the mutation changed *nothing else*. Only a *creation*, which has no prior state, uses a key-only `before`.
+- **`{}` updates only holds when the constraint fixes every changed field to a `const`.** The helper auto-asserts a changed field only where the event's constraint pins it to a `const` (like `status`); a field the constraint merely *tightens* (e.g. `externalReference` to non-null) gets a loose `expect.any(...)` matcher, so its exact value must still be passed in `updates` or the assertion won't catch a wrong one.
 - **`SpannerFixture` copies the real DDL.** The emulated database is built from the service's declared schema (`SPANNER_DATABASE`), so a table missing from `spannerTypes` is simply never truncated between tests — a source of cross-test bleed if you forget to list it.
 - **State resets, the app does not.** `clear()` (afterEach) resets data only; the Nest app and its providers are booted once per file in `beforeAll`. Anything cached in a provider's constructor persists across a file's tests.
 

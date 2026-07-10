@@ -181,13 +181,75 @@ paths:
               schema:
                 $ref: ./dtos/invalid-order-status-error.dto.yaml
         "403":
-          description: The caller is not allowed to process this order.
+          description: >-
+            The caller can see the order but is not allowed to process it (its
+            own customer, who is not staff).
           content:
             application/json:
               schema:
                 $ref: ../../common/api/dtos/forbidden-error.dto.yaml
         "404":
-          description: The order was not found.
+          description: >-
+            The order was not found (or is not visible to the caller).
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/not-found-error.dto.yaml
+        "409":
+          description: The provided version does not match the current version.
+          content:
+            application/json:
+              schema:
+                $ref: ../../common/api/dtos/incorrect-version-error.dto.yaml
+
+  /orders/{id}/cancel:
+    post:
+      summary: Cancels a pending order.
+      operationId: orderCancel
+      description: |-
+        Cancels a pending order, moving it to `cancelled`.
+        Cancellation is terminal: a cancelled order is never processed.
+
+        Accessible to the order's own customer and to staff.
+        Only a `pending` order can be cancelled.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the order to cancel.
+        # Like `orderProcess`, the mutation is guarded by optimistic
+        # concurrency: the client passes the `updatedAt` it last saw, and a
+        # stale value is rejected with `409`.
+        # See patterns/optimistic-concurrency-control.md.
+        - name: updatedAt
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: The version of the order the client is cancelling.
+      responses:
+        "200":
+          description: The order was cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: ./dtos/order.dto.yaml
+        "400":
+          description: The order is not pending.
+          content:
+            application/json:
+              schema:
+                $ref: ./dtos/invalid-order-status-error.dto.yaml
+        # No `403`: a caller who is neither the owner nor staff is answered with
+        # `404`, so the API never reveals that someone else's order exists (the
+        # same existence-hiding rule as `orderGet`).
+        # See patterns/controller-authorization-via-validationfn.md.
+        "404":
+          description: The order was not found (or is not the caller's).
           content:
             application/json:
               schema:
