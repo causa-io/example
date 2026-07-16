@@ -11,6 +11,7 @@ import {
   NotFoundErrorDto,
   toDto,
   toDtoType,
+  ValidationErrorDto,
 } from '@causa/runtime/nestjs';
 import { BookNotFoundError, BookUnavailableError } from '../catalog/errors.js';
 import { ForbiddenError } from '../errors.js';
@@ -21,7 +22,11 @@ import {
   Order,
   OrderPublicDto,
 } from '../model/generated.js';
-import { InvalidOrderStatusError, OrderNotFoundError } from './errors.js';
+import {
+  InvalidOrderStatusError,
+  OrderNotFoundError,
+  OrderValidationError,
+} from './errors.js';
 
 /**
  * Maps {@link OrderNotFoundError} to the shared `404 notFound` DTO.
@@ -38,6 +43,21 @@ export const orderNotFoundErrorAsDto = toDtoType(
  * DTO.
  */
 export const forbiddenErrorAsDto = toDtoType(ForbiddenError, ForbiddenErrorDto);
+
+/**
+ * Maps {@link OrderValidationError} — the validator's accumulated value-check
+ * failures — to the shared `400 invalidInput` {@link ValidationErrorDto}, the
+ * very DTO the framework's `ValidationPipe` returns for shape errors. So a
+ * client sees semantic and shape validation failures in one uniform shape.
+ */
+export const orderValidationErrorAsDto = toDto(
+  OrderValidationError,
+  ({ validationMessages, fields }) =>
+    new ValidationErrorDto(
+      validationMessages.map((message) => `- ${message}`).join('\n'),
+      fields,
+    ),
+);
 
 /**
  * Maps {@link InvalidOrderStatusError} to the domain `400

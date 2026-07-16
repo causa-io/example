@@ -146,6 +146,25 @@ describe('OrderApiController', () => {
       );
     });
 
+    it('should reject an order with no lines', async () => {
+      // `lines: []` passes shape validation (an array is present), so it
+      // reaches the validator's own value check, which rejects it.
+      await fixture.request
+        .post('/orders')
+        .auth(token, { type: 'bearer' })
+        .send({ lines: [] })
+        .expect(400)
+        .expect(({ body }) =>
+          expect(body).toMatchObject({
+            statusCode: 400,
+            errorCode: 'invalidInput',
+            fields: ['lines'],
+          }),
+        );
+
+      await expectNoOrderEvent(fixture.get(PubSubFixture));
+    });
+
     it('should reject an order for a book that does not exist', async () => {
       const book = randomUUID();
 
