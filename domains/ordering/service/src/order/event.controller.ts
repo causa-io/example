@@ -35,6 +35,10 @@ export class OrderEventController implements OrdersEventsContract {
   }
 
   async handleOrderForFirestore(event: OrderEvent): Promise<void> {
+    // Enrich the event-scoped logger with the domain fields. The Causa
+    // runtime's Pub/Sub interceptor has already assigned `eventId` (and
+    // `pubSubMessageId`) to this logger, so every line handling this delivery
+    // is correlated by the event. We add the order id and event name on top.
     this.logger.assign({ orderId: event.data.id, eventName: event.name });
 
     // `processOrSkipEvent` upserts the `OrderDocument`, or returns `null` (a

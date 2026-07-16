@@ -68,7 +68,13 @@ export class OrderApiController implements OrderApiContract {
     // Mint the order ID here, so it is logged (and traceable) before any write,
     // and hand it to the service, which uses it rather than generating its own.
     const orderId = randomUUID();
-    this.logger.assign({ orderId, customer: actor.id });
+    // Enrich the request-scoped logger. `assign` binds these fields to *this*
+    // request's logger, so every line emitted while handling it — including the
+    // framework's automatic "request completed" line — carries them. They
+    // become structured columns to filter and build log-based metrics on in
+    // Cloud Logging: `actor` (who made the call) and `orderId` (which order it
+    // created).
+    this.logger.assign({ orderId, actor: actor.id });
 
     // The controller opens the transaction and tags it for observability.
     // Other options could be set on the transaction here, such as event
@@ -87,7 +93,8 @@ export class OrderApiController implements OrderApiContract {
     { id }: OrderGetPathParams,
     @AuthUser() actor: User,
   ): Promise<OrderPublicDto> {
-    this.logger.assign({ orderId: id });
+    // Same request-wide enrichment as `place`.
+    this.logger.assign({ orderId: id, actor: actor.id });
 
     // Creating the transaction here would actually be optional, as we're not
     // adding a tag and the authorization logic does not access additional
@@ -112,7 +119,9 @@ export class OrderApiController implements OrderApiContract {
     // A staff member may target a specific `customer`.
     const customer = query.customer ?? actor.id;
     this.authorizationService.validateCanList(actor, customer);
-    this.logger.assign({ customer });
+    // `actor` is the caller; `customer` is the account whose orders are listed.
+    // Usually the same, but a staff member may target another.
+    this.logger.assign({ actor: actor.id, customerId: customer });
 
     // Parse + validate the raw params (decoding the opaque `readAfter` cursor),
     // then default and cap the page size.
@@ -148,7 +157,7 @@ export class OrderApiController implements OrderApiContract {
     book: string,
     query: OrderPageQuery,
   ): Promise<Page<Order, OrderPageQuery>> {
-    this.logger.assign({ book });
+    this.logger.assign({ bookId: book });
     this.authorizationService.validateCanListByBook(actor);
     return this.queryService.listByBook(book, query);
   }
@@ -163,7 +172,7 @@ export class OrderApiController implements OrderApiContract {
     query: OrderPageQuery,
   ): Promise<Page<Order, OrderPageQuery>> {
     const target = customer ?? actor.id;
-    this.logger.assign({ customer: target });
+    this.logger.assign({ customerId: target });
     this.authorizationService.validateCanList(actor, target);
     return this.queryService.listByCustomer(target, query);
   }
@@ -179,7 +188,7 @@ export class OrderApiController implements OrderApiContract {
     { updatedAt }: OrderProcessQueryParams,
     @AuthUser() actor: User,
   ): Promise<OrderPublicDto> {
-    this.logger.assign({ orderId: id });
+    this.logger.assign({ orderId: id, actor: actor.id });
 
     // Authorization is decided against the stored order.
     // Like `cancel`, the check is injected as the manager's `validationFn`.
@@ -206,7 +215,7 @@ export class OrderApiController implements OrderApiContract {
     { updatedAt }: OrderCancelQueryParams,
     @AuthUser() actor: User,
   ): Promise<OrderPublicDto> {
-    this.logger.assign({ orderId: id });
+    this.logger.assign({ orderId: id, actor: actor.id });
 
     // Cancelling is allowed to the order's own customer or to staff, a decision
     // that depends on the *stored* order, not just the caller. So the check is
