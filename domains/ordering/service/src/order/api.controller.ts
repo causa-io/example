@@ -38,6 +38,7 @@ import {
   incorrectVersionErrorAsDto,
   invalidOrderStatusErrorAsDto,
   orderNotFoundErrorAsDto,
+  orderValidationErrorAsDto,
   toOrderPublicDto,
 } from './dto.utils.js';
 import { OrderListQueryDto } from './list-query.dto.js';
@@ -60,7 +61,11 @@ export class OrderApiController implements OrderApiContract {
     this.logger.setContext(OrderApiController.name);
   }
 
-  @TryMap(bookNotFoundErrorAsDto, bookUnavailableErrorAsDto)
+  @TryMap(
+    orderValidationErrorAsDto,
+    bookNotFoundErrorAsDto,
+    bookUnavailableErrorAsDto,
+  )
   async place(
     body: OrderCreateDto,
     @AuthUser() actor: User,

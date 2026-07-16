@@ -13,7 +13,7 @@
     "build": "tsc -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules --no-warnings=ExperimentalWarning\" jest",
+    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules --no-warnings=ExperimentalWarning\" GOOGLE_APPLICATION_CREDENTIALS= jest",
     "test:cov": "npm run test -- --coverage",
     "typecheck": "tsc --noEmit"
   },
