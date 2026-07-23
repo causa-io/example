@@ -13,6 +13,9 @@ import {
   OrderEvent,
   OrderLine,
   OrderStatus,
+  ReviewReminder,
+  ReviewRequest,
+  ReviewRequestEvent,
   type BookCreatedEvent,
   type BookDeleted,
   type BookDeletedEvent,
@@ -379,4 +382,36 @@ export function makeOrderProcessingEvent(
     producedAt: new Date(),
     ...data,
   }) as OrderProcessingEvent;
+}
+
+export function makeReviewReminder(
+  data: Partial<ReviewReminder> = {},
+): ReviewReminder {
+  return new ReviewReminder({
+    id: _CryptoRandomUuid(),
+    sentAt: new Date(),
+    ...data,
+  });
+}
+
+export function makeReviewRequest(
+  data: Partial<ReviewRequest> = {},
+): ReviewRequest {
+  return new ReviewRequest({
+    customer: _CryptoRandomUuid(),
+    order: _CryptoRandomUuid(),
+    ...data,
+  });
+}
+
+export function makeReviewRequestEvent(
+  data: Partial<ReviewRequestEvent> = {},
+): ReviewRequestEvent {
+  return new ReviewRequestEvent({
+    data: makeReviewRequest(),
+    id: _CryptoRandomUuid(),
+    name: 'reviewRequested',
+    producedAt: new Date(),
+    ...data,
+  });
 }

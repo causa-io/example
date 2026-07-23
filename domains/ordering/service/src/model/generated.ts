@@ -1100,3 +1100,108 @@ export class OrderListDto {
   @_ClassValidatorIsString()
   readonly nextPageQuery!: string | null;
 }
+
+/**
+ * A marker row recording that the "rate your book" reminder email has been published for an order. Used to make the at-least-once Cloud Tasks handler idempotent.
+ */
+@_CausaRuntimeGoogleSpannerTable({ primaryKey: ['id'] })
+export class ReviewReminder {
+  constructor(init: ReviewReminder) {
+    Object.assign(this, init);
+  }
+
+  /**
+   * The ID of the order the reminder was sent for.
+   */
+  @_CausaRuntimeGoogleSpannerColumn()
+  @_ClassValidatorIsUuid(undefined)
+  readonly id!: string;
+
+  /**
+   * The date at which the reminder email was published.
+   */
+  @_CausaRuntimeGoogleSpannerColumn()
+  @_ClassTransformerType(() => Date)
+  @_ClassValidatorIsDate()
+  readonly sentAt!: Date;
+}
+
+/**
+ * The payload of a Cloud Tasks task asking the ordering service to send a customer the "rate your book" email for a completed order.
+ */
+export class ReviewReminderTask {
+  constructor(init: ReviewReminderTask) {
+    Object.assign(this, init);
+  }
+
+  /**
+   * The ID of the (completed) order the reminder is for.
+   */
+  @_ClassValidatorIsUuid(undefined)
+  readonly order!: string;
+}
+
+/**
+ * Identifies the completed order (and its customer) to request a review for.
+ */
+export class ReviewRequest {
+  constructor(init: ReviewRequest) {
+    Object.assign(this, init);
+  }
+
+  /**
+   * The ID of the completed order to review.
+   */
+  @_ClassValidatorIsUuid(undefined)
+  readonly order!: string;
+
+  /**
+   * The ID of the customer to email.
+   */
+  @_ClassValidatorIsUuid(undefined)
+  readonly customer!: string;
+}
+
+/**
+ * The name of a review-request event.
+ */
+export enum ReviewRequestEventName {
+  ReviewRequested = 'reviewRequested',
+}
+
+/**
+ * An event asking that a customer be invited to review a completed order.
+ */
+export class ReviewRequestEvent {
+  constructor(init: ReviewRequestEvent) {
+    Object.assign(this, init);
+  }
+
+  /**
+   * The UUID of the event (used for de-duplication by consumers).
+   */
+  @_ClassValidatorIsUuid(undefined)
+  readonly id!: string;
+
+  /**
+   * The date at which the review request was issued.
+   */
+  @_ClassTransformerType(() => Date)
+  @_ClassValidatorIsDate()
+  readonly producedAt!: Date;
+
+  /**
+   * The name of the event.
+   */
+  @_ClassValidatorIsString()
+  readonly name!: string | ReviewRequestEventName;
+
+  /**
+   * The review request payload.
+   */
+  @_ClassTransformerType(() => ReviewRequest)
+  @_ClassValidatorIsDefined()
+  @_ClassValidatorIsObject()
+  @_ClassValidatorValidateNested()
+  readonly data!: ReviewRequest;
+}
