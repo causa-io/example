@@ -54,7 +54,7 @@ serviceContainer:
         type: http
         path: /catalog/handleBookForProjection
 
-    # ── Mirror orders into the Firestore read model ─────────────────────────────────────
+    # Mirror orders into the Firestore read model.
     # Subscribes to this service's OWN order events and writes the OrderDocument so the
     # customer's app gets a real-time order history.
     handleOrderForFirestore:
@@ -64,7 +64,7 @@ serviceContainer:
         type: http
         path: /orders/handleOrderForFirestore
 
-    # ── Synchronise a processing order with the third-party provider ────────────────────
+    # Synchronize a processing order with the third-party provider.
     # Subscribes to this service's own order events, filtered to `orderProcessing`. The
     # handler calls the third-party system (e.g. a payment/fulfilment provider) and emits
     # `orderConfirmed` on success or `orderFailed` on rejection — resolving the `processing`
@@ -78,7 +78,7 @@ serviceContainer:
       google.pubSub:
         filter: attributes.eventName = "orderProcessing"
 
-    # ── Expire stale pending orders ─────────────────────────────────────────────────────
+    # Expire stale pending orders.
     # A scheduled job: pending orders older than the allowed window are auto-failed.
     expirePendingOrders:
       type: cron
@@ -87,12 +87,45 @@ serviceContainer:
         type: http
         path: /orders/expirePendingOrders
 
+    # Schedule a review-reminder email.
+    # Reacts to this service's own `orderConfirmed` events and enqueues a Cloud
+    # Tasks task ~7 days out (see the handler below). Scheduling lives in its
+    # own event trigger — not in the order-confirming write — precisely because
+    # Cloud Tasks is not part of the transactional outbox.
+    # Driving it from the reliable, at-least-once event stream is what
+    # guarantees the reminder gets scheduled.
+    # A failed enqueue just makes Pub/Sub redeliver the event and try again.
+    scheduleReviewReminder:
+      type: event
+      topic: ordering.order.v1
+      endpoint:
+        type: http
+        path: /orders/scheduleReviewReminder
+      google.pubSub:
+        filter: attributes.eventName = "orderConfirmed"
+
+    # Send a review-reminder email (Cloud Tasks queue).
+    # Queue-driven entrypoint: the Cloud Tasks task enqueued above fires ~7 days
+    # later and POSTs here. The handler re-checks the order is still completed,
+    # de-duplicates via the `ReviewReminder` marker table (Cloud Tasks is
+    # at-least-once), and publishes `ordering.review-request.v1` inside the
+    # outbox transaction. `queue` names the Cloud Tasks queue the infra module
+    # provisions. `dto` types the plain task payload.
+    sendReviewReminder:
+      type: task
+      queue: ordering-review-reminder
+      dto: ../tasks/review-reminder.yaml
+      endpoint:
+        type: http
+        path: /orders/sendReviewReminder
+
   # What this service produces/owns.
   # Drives infrastructure provisioning (e.g. IAM permissions).
   outputs:
     # The Pub/Sub topic(s) this service publishes to.
     eventTopics:
       - ordering.order.v1
+      - ordering.review-request.v1
     # The Spanner database this service owns, as `<instance>.<database>`.
     google.spanner:
       - backend.ordering
