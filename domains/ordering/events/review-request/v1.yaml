@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# This is a plain event, not an entity event: it has no `causa.entityEvent`
+# marker, and its `data` is a plain payload, not a versioned entity with
+# state-machine constraints. It still keeps the standard event envelope
+# (`id` / `producedAt` / `name` / `data`) that every topic in the backend uses.
+#
+# It is published by the `sendReviewReminder` Cloud Tasks handler within its
+# outbox transaction. An (unmodelled) email/notification service subscribes to
+# this topic and sends the actual email.
+
+title: ReviewRequestEvent
+type: object
+description: >-
+  An event asking that a customer be invited to review a completed order.
+additionalProperties: false
+properties:
+  id:
+    type: string
+    format: uuid
+    description: The UUID of the event.
+  producedAt:
+    type: string
+    format: date-time
+    description: The date at which the review request was issued.
+  name:
+    type: string
+    # A single name today, but an `enumHint` (rather than a closed enum) leaves
+    # the door open to adding sibling notifications on this topic later without
+    # a breaking change. See the "open / closed enum" pattern.
+    causa:
+      enumHint: "#/$defs/ReviewRequestEventName"
+    description: The name of the event.
+  data:
+    oneOf:
+      - $ref: "#/$defs/ReviewRequest"
+    description: The review request payload.
+required:
+  - id
+  - producedAt
+  - name
+  - data
+
+$defs:
+  ReviewRequestEventName:
+    title: ReviewRequestEventName
+    type: string
+    enum:
+      - reviewRequested
+    description: The name of a review-request event.
+
+  ReviewRequest:
+    title: ReviewRequest
+    type: object
+    description: >-
+      Identifies the completed order (and its customer) to request a review for.
+    additionalProperties: false
+    properties:
+      order:
+        type: string
+        format: uuid
+        description: The ID of the completed order to review.
+      customer:
+        type: string
+        format: uuid
+        description: The ID of the customer to email.
+    required:
+      - order
+      - customer
