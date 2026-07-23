@@ -59,6 +59,7 @@ model:
         - ../spanner/*.yaml
         - ../firestore/*.yaml
         - ../events/*/*.yaml
+        - ../tasks/*.yaml
         - ../api/**/*.dto.yaml
       output: src/model/generated.ts
       # Additional configuration for decorators provided by the Google Causa

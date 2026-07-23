@@ -45,6 +45,7 @@ model:
     - domains/*/firestore/**/*.yaml
     - domains/*/events/**/*.yaml
     - domains/*/api/**/*.dto.yaml
+    - domains/*/tasks/**/*.yaml
 
 events:
   format: json
