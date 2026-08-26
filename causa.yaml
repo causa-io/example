@@ -23,7 +23,7 @@ causa:
   # behaviors. The set below is the standard stack for a TypeScript + Google
   # Cloud + Terraform project.
   modules:
-    "@causa/workspace-core": ^1.2.1
+    "@causa/workspace-core": ^1.4.0
     "@causa/workspace-google": ^1.2.0
     "@causa/workspace-terraform": ^1.0.0
     "@causa/workspace-typescript": ^1.2.0
