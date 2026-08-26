@@ -85,7 +85,7 @@ The rules are *executable*, so they are tested from the client's side against th
 ```typescript
 // collections.spec.ts — the deployed rules, not the app
 // The emulator already serves the merged `.causa/firestore.rules` (Causa loads
-// it), and project id + host come from `.env` — so no config is needed.
+// it), and project id + host come from `.causa/emulators.env`.
 env = await initializeTestEnvironment({});
 const asUser = (uid, claims) => env.authenticatedContext(uid, claims).firestore();
 
