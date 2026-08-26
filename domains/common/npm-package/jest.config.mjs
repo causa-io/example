@@ -11,7 +11,6 @@ const config = {
   ],
   rootDir: 'src',
   testEnvironment: 'node',
-  setupFiles: ['dotenv/config'],
   setupFilesAfterEnv: ['jest-extended/all'],
   testMatch: ['**/*.spec.ts'],
   extensionsToTreatAsEsm: ['.ts'],
