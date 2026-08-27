@@ -9,7 +9,7 @@
 // `GoogleFirestoreMergeRules` processor produces from every domain's
 // `firestore/*.rules` fragment and that Terraform deploys — so this asserts
 // exactly what ships, helper functions and all. Requires the Firestore emulator
-// (`FIRESTORE_EMULATOR_HOST`, from `.env`).
+// (`FIRESTORE_EMULATOR_HOST`, from `.causa/emulators.env`).
 
 import {
   assertFails,
@@ -32,8 +32,8 @@ describe('collections', () => {
 
   beforeAll(async () => {
     // The emulator already serves the merged `.causa/firestore.rules` (Causa
-    // loads it), and project id + host come from `.env` — so no config is
-    // needed.
+    // loads it), and project id + host come from `.causa/emulators.env` — so no
+    // config is needed.
     env = await initializeTestEnvironment({});
   });
 
