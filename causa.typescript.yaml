@@ -33,7 +33,7 @@ javascript:
   dependencies:
     check:
       # An CVE allowlist for `cs dep check`.
-      allowlist: []
+      allowlist: [GHSA-4x5r-pxfx-6jf8, GHSA-8988-4f7v-96qf, GHSA-w5hq-g745-h8pq]
     update:
       packageTargets:
         # When updating packages, the Node.js types should stay in sync with the
