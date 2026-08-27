@@ -69,3 +69,12 @@ export class InvalidOrderStatusError extends Error {
     super(`The order cannot transition from its '${status}' status.`);
   }
 }
+
+/**
+ * Thrown when a review reminder has already been published for an order.
+ */
+export class ReviewReminderAlreadySentError extends Error {
+  constructor() {
+    super('A review reminder has already been sent for this order.');
+  }
+}
