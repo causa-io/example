@@ -7,8 +7,10 @@
 import { Module } from '@nestjs/common';
 import { OrderEventController } from './event.controller.js';
 import { OrderFirestoreProjectionService } from './firestore-projection.service.js';
+import { OrderModule } from './module.js';
 
 @Module({
+  imports: [OrderModule],
   controllers: [OrderEventController],
   providers: [OrderFirestoreProjectionService],
 })
