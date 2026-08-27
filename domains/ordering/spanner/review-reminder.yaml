@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# A minimal internal state table used solely to de-duplicate review-reminder
+# emails. Cloud Tasks delivers a task at least once, so the `sendReviewReminder`
+# handler may run more than once for the same order. The row's existence records
+# "the reminder email has already been published for this order".
+#
+# It lives under `spanner/` (not `entities/`) because it is an internal table
+# the ordering service keeps for its own bookkeeping. It is not a first-class
+# entity of the domain and emits no events of its own.
+
+title: ReviewReminder
+type: object
+description: >-
+  A marker row recording that the "rate your book" reminder email has been
+  published for an order.
+  Used to make the at-least-once Cloud Tasks handler idempotent.
+additionalProperties: false
+causa:
+  googleSpannerTable:
+    primaryKey: [id]
+properties:
+  id:
+    type: string
+    format: uuid
+    description: The ID of the order the reminder was sent for.
+  sentAt:
+    type: string
+    format: date-time
+    # Drives the Spanner row-deletion policy: the marker is retained well beyond
+    # any possible duplicate-delivery window, then garbage-collected.
+    description: The date at which the reminder email was published.
+required:
+  - id
+  - sentAt

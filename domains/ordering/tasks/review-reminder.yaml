@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+#
+# The payload of a Cloud Tasks task. Unlike an event (`events/`), a task DTO is
+# not an entity-event envelope: it is a plain deferred command, carrying just
+# enough to identify the work to do when the queue fires.
+#
+# This schema is referenced by the `sendReviewReminder` trigger's `dto:` in
+# `service/causa.yaml`, which types the `@EventBody()` payload the handler
+# receives.
+
+title: ReviewReminderTask
+type: object
+description: >-
+  The payload of a Cloud Tasks task asking the ordering service to send a
+  customer the "rate your book" email for a completed order.
+additionalProperties: false
+properties:
+  # The task only needs to identify the order. The handler loads the order to
+  # read the customer and to re-check the order is still in the expected state.
+  # The payload is deliberately minimal, as at least-once delivery needs to be
+  # accounted for: the database state has to be checked anyway.
+  order:
+    type: string
+    format: uuid
+    description: The ID of the (completed) order the reminder is for.
+required:
+  - order

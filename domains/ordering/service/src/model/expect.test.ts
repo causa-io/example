@@ -21,6 +21,9 @@ import {
   OrderEvent,
   OrderLine,
   OrderStatus,
+  ReviewReminder,
+  ReviewRequest,
+  ReviewRequestEvent,
   type OrderCancelled,
   type OrderConfirmed,
   type OrderDeleted,
@@ -484,6 +487,25 @@ export async function expectOrderProcessingEvent(
   );
 }
 
+export async function expectReviewRequestEvent(
+  eventFixture: _CausaRuntimeEventFixture,
+  expected: Partial<ReviewRequestEvent> = {},
+): Promise<void> {
+  await eventFixture.expectEvent('ordering.review-request.v1', {
+    data: expect.any(ReviewRequest),
+    id: expect.any(String),
+    name: expect.any(String),
+    producedAt: expect.any(Date),
+    ...expected,
+  });
+}
+
+export async function expectNoReviewRequestEvent(
+  eventFixture: _CausaRuntimeEventFixture,
+): Promise<void> {
+  await eventFixture.expectNoEvent('ordering.review-request.v1');
+}
+
 export async function expectOrderDocument(
   runner: _CausaRuntimeTransactionRunner<
     _CausaRuntimeTransaction,
@@ -593,6 +615,37 @@ export async function expectOrderBookIndexNotToExist(
 ): Promise<void> {
   const actual = await runner.run({ readOnly: true }, (t) =>
     t.get(OrderBookIndex, key),
+  );
+  expect(actual).toEqual(null);
+}
+
+export async function expectReviewReminder(
+  runner: _CausaRuntimeTransactionRunner<
+    _CausaRuntimeTransaction,
+    _CausaRuntimeReadOnlyStateTransaction
+  >,
+  expected: Partial<ReviewReminder>,
+): Promise<ReviewReminder> {
+  const actual = await runner.run({ readOnly: true }, (t) =>
+    t.get(ReviewReminder, expected),
+  );
+  expect(actual).toEqual({
+    id: expect.any(String),
+    sentAt: expect.any(Date),
+    ...expected,
+  });
+  return actual as ReviewReminder;
+}
+
+export async function expectReviewReminderNotToExist(
+  runner: _CausaRuntimeTransactionRunner<
+    _CausaRuntimeTransaction,
+    _CausaRuntimeReadOnlyStateTransaction
+  >,
+  key: Partial<ReviewReminder>,
+): Promise<void> {
+  const actual = await runner.run({ readOnly: true }, (t) =>
+    t.get(ReviewReminder, key),
   );
   expect(actual).toEqual(null);
 }

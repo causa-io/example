@@ -5,6 +5,7 @@
 // Pub/Sub and the transactional outbox is declared exactly once.
 
 import {
+  CloudTasksModule,
   FirebaseModule,
   FirestorePubSubTransactionModule,
   PubSubPublisherModule,
@@ -42,6 +43,11 @@ import { HealthModule } from './health.js';
     // projection to write `OrderDocument`s. It relies on `FirebaseModule` (the
     // Firestore client) and `PubSubPublisherModule`, both declared above.
     FirestorePubSubTransactionModule.forRoot(),
+
+    // Provides the (global) `CloudTasksScheduler` used to enqueue tasks.
+    // The matching interceptor that parses delivered tasks is registered in
+    // `EventsModule`.
+    CloudTasksModule.forRoot(),
 
     HealthModule,
   ],
